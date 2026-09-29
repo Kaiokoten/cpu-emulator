@@ -7,17 +7,21 @@
 
 #define LINE_BUFFER_SIZE 50
 #define MEMSIZE 4092
+#define INSTRUCTION_BUF 100
 
 
 uint64_t MEMORY[MEMSIZE];
 
 
 typedef enum{
-    MOV
+    MOV,
+    ADD
 }Opcode;
 
 const char *opcode_names[] = {
     [MOV] = "MOV",
+    [ADD] = "ADD"
+
 };
 
 typedef enum{
@@ -38,6 +42,8 @@ typedef enum{
 
 typedef struct{
     int64_t REGS[16];
+    int pc;
+    int is_halted;
 
 }CPU;
 
@@ -159,12 +165,12 @@ Instr make_instr(char *buf){
     char** line = split(buf,' ');
     
     line_s = sizeof_dArr(line);
-    
+
     Instr instr;
     
     switch(line_s){
         case 0:
-            printf("empty line");
+            
             break;
         case 1:
             instr.opcode = word_to_opcode(line[0]);
@@ -185,68 +191,103 @@ Instr make_instr(char *buf){
 
 }
 
-void compiler(char file_name[]){
+Instr* asembler(char file_name[], int* number_of_instructions){
 //Open file
+
+    Instr *instr_list = malloc(sizeof(Instr) * INSTRUCTION_BUF);
+
+
     CPU cpu;
 
-    FILE *fp = fopen(file_name,"r");
+    FILE *fp = fopen(file_name,"r"); 
     if(fp == NULL){
         printf("Couldnt't open the file!");
-        return;
+        return NULL;
     } 
 
     char buf[LINE_BUFFER_SIZE];
-
+    int i = 0;
 
     while(fgets(buf,LINE_BUFFER_SIZE,fp)!=NULL){
-
+        
         Instr instr;
         instr = make_instr(buf);
+        instr_list[i] = instr;
+        i++;
 
-        if(instr.opcode == MOV){
-            if(instr.operand1.type == REG && instr.operand2.type == REG ){
-                cpu.REGS[instr.operand1.value] = cpu.REGS[instr.operand2.value];
-            }else if(instr.operand1.type == REG && instr.operand2.type == VALUE ){
-                  cpu.REGS[instr.operand1.value] = instr.operand2.value;
-
-            }else if(instr.operand1.type == MEM_ADDR && instr.operand2.type == REG ){
-                if(instr.operand1.value < MEMSIZE){
-                    MEMORY[instr.operand1.value] = cpu.REGS[instr.operand2.value];
-                    
-                }
-            }else if(instr.operand1.type == MEM_ADDR && instr.operand2.type == VALUE ){
-                if(instr.operand1.value  < MEMSIZE){
-                    MEMORY[instr.operand1.value] = instr.operand2.value;
-                
-                }
-            }
-            
-                
-        }
+       
 
 
     }
 
-        
 
         
-        
-
-        
-
-
-
-
-
-
+    *number_of_instructions = i;
+    
     fclose(fp);
+    return instr_list;
 
 }
+
+
+void compiler(CPU *cpu,Instr *instructions, int number_of_instruction){
+    int i = 0;
+    Instr *instr = instructions;
+
+    for(; i < number_of_instruction;i++){
+        instr = instructions + i;
+        if(instr->opcode == MOV){
+            if(instr->operand1.type == REG && instr->operand2.type == REG ){
+                cpu->REGS[instr->operand1.value] = cpu->REGS[instr->operand2.value];
+            
+            }else if(instr->operand1.type == REG && instr->operand2.type == VALUE ){
+                  cpu->REGS[instr->operand1.value] = instr->operand2.value;
+             
+
+            }else if(instr->operand1.type == MEM_ADDR && instr->operand2.type == REG ){
+                if(instr->operand1.value < MEMSIZE){
+                    MEMORY[instr->operand1.value] = cpu->REGS[instr->operand2.value];
+                 
+                }
+            }else if(instr->operand1.type == MEM_ADDR && instr->operand2.type == VALUE ){
+                if(instr->operand1.value  < MEMSIZE){
+                    MEMORY[instr->operand1.value] = instr->operand2.value;
+                  
+                }
+            }
+            
+                
+        }else if(instr->opcode == ADD){
+
+
+
+        }
+
+
+
+
+
+
+    }
+     
+
+}
+
+
 int main(void){
 
 
+    int number_of_instruction;
+    Instr *instr_list = asembler("program.asm", &number_of_instruction);
+    CPU processor;
+    CPU *cpu = &processor;
 
-    compiler("program.asm");
+    compiler(cpu,instr_list,number_of_instruction);
+
+    printf("%lld", cpu->REGS[RAX]);
+    printf("%lld", MEMORY[100]);
+
+    free(instr_list);
 
     return 0;
 }
