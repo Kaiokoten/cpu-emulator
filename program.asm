@@ -1,1 +1,3 @@
-mov AH,AL
+MOV RAX, RCX
+MOV RDX, 42
+MOV [123], RAX

@@ -6,7 +6,10 @@
 
 
 #define LINE_BUFFER_SIZE 50
+#define MEMSIZE 4092
 
+
+uint64_t MEMORY[MEMSIZE];
 
 
 typedef enum{
@@ -35,7 +38,8 @@ typedef enum{
 
 typedef struct{
     int64_t REGS[16];
-}CPU_REGS;
+
+}CPU;
 
 typedef enum{
     MEM_ADDR,
@@ -75,6 +79,9 @@ int sizeof_dArr(char** a){
     return length;
 }
 
+
+
+
 char** split(char line[], char symbol){
     int i = 0;
     int j = 0;
@@ -95,8 +102,8 @@ char** split(char line[], char symbol){
 
         if(line[i] == '\0'  || line[i] == EOF || line[i] =='\n') break;
         i++;
-        while(line[i] == symbol)i++;        
-    }  
+        while(line[i] == symbol)i++;
+    }
     words[j] = NULL;
     return words;
 }
@@ -146,8 +153,42 @@ Opcode word_to_opcode(char *word){
     return opcode;
 }
 
+Instr make_instr(char *buf){
+    Instr instruction;
+    int line_s = 0;
+    char** line = split(buf,' ');
+    
+    line_s = sizeof_dArr(line);
+    
+    Instr instr;
+    
+    switch(line_s){
+        case 0:
+            printf("empty line");
+            break;
+        case 1:
+            instr.opcode = word_to_opcode(line[0]);
+            break;
+        case 2:
+            instr.opcode = word_to_opcode(line[0]);
+            instr.operand1 = word_to_operand(line[1]);
+            break;
+        case 3:
+            instr.opcode = word_to_opcode(line[0]);
+            instr.operand1 = word_to_operand(line[1]);
+            instr.operand2 = word_to_operand(line[2]);
+            
+            break;
+    }
+
+    return instr;
+
+}
+
 void compiler(char file_name[]){
 //Open file
+    CPU cpu;
+
     FILE *fp = fopen(file_name,"r");
     if(fp == NULL){
         printf("Couldnt't open the file!");
@@ -155,44 +196,46 @@ void compiler(char file_name[]){
     } 
 
     char buf[LINE_BUFFER_SIZE];
-    char** words = NULL;
-    int words_s = 0;
+
 
     while(fgets(buf,LINE_BUFFER_SIZE,fp)!=NULL){
-        Instr instruction;
-        words = split(buf,' ');
-        
-        words_s = sizeof_dArr(words);
-        
+
         Instr instr;
-        
-        switch(words_s){
-            case 0:
-                printf("empty line");
-                break;
-            case 1:
-                instr.opcode = word_to_opcode(words[0]);
-                break;
-            case 2:
-                instr.opcode = word_to_opcode(words[0]);
-                instr.operand1 = word_to_operand(words[1]);
-                break;
-            case 3:
-                instr.opcode = word_to_opcode(words[0]);
-                instr.operand1 = word_to_operand(words[1]);
-                instr.operand2 = word_to_operand(words[2]);
+        instr = make_instr(buf);
+
+        if(instr.opcode == MOV){
+            if(instr.operand1.type == REG && instr.operand2.type == REG ){
+                cpu.REGS[instr.operand1.value] = cpu.REGS[instr.operand2.value];
+            }else if(instr.operand1.type == REG && instr.operand2.type == VALUE ){
+                  cpu.REGS[instr.operand1.value] = instr.operand2.value;
+
+            }else if(instr.operand1.type == MEM_ADDR && instr.operand2.type == REG ){
+                if(instr.operand1.value < MEMSIZE){
+                    MEMORY[instr.operand1.value] = cpu.REGS[instr.operand2.value];
+                    
+                }
+            }else if(instr.operand1.type == MEM_ADDR && instr.operand2.type == VALUE ){
+                if(instr.operand1.value  < MEMSIZE){
+                    MEMORY[instr.operand1.value] = instr.operand2.value;
                 
-                break;
+                }
+            }
+            
+                
         }
-
-        
-        
-
-        
-
 
 
     }
+
+        
+
+        
+        
+
+        
+
+
+
 
 
 
@@ -203,8 +246,7 @@ int main(void){
 
 
 
-  
-
+    compiler("program.asm");
 
     return 0;
 }

@@ -2,10 +2,7 @@
 #include<stdint.h>
 #include<stdlib.h>
 
-#define MEMSIZE 4092
 
-
-uint64_t MEM[MEMSIZE];
 
 
 
