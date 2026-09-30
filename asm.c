@@ -17,11 +17,15 @@ typedef enum {
     INC,
     SUB,
     CMP,
-    JMP
+    JMP,
+    JE,
+    HALT,
+    PRINT
 } Opcode;
 
-const char *opcode_names[] = {[MOV] = "mov", [ADD] = "add", [DEC] = "dec", [INC] = "inc",
-                              [SUB] = "sub", [CMP] = "cmp", [JMP] = "jmp"
+const char *opcode_names[] = {[MOV] = "mov",   [ADD] = "add",    [DEC] = "dec", [INC] = "inc",
+                              [SUB] = "sub",   [CMP] = "cmp",    [JMP] = "jmp", [JE] = "je",
+                              [HALT] = "halt", [PRINT] = "print"
 
 };
 
@@ -78,7 +82,7 @@ typedef enum {
 
 typedef struct {
     Type_of_operand type;
-    int value;
+    int64_t value;
     char label[LINE_BUFFER_SIZE];
 } Operand;
 
@@ -150,7 +154,7 @@ char **split(char line[], char symbol) {
 
 Operand word_to_operand(char *word) {
     Operand operand;
-    
+
     int k = 0;
 
     for (; word[k] != '\0' && word[k] != ','; k++) {
@@ -176,7 +180,7 @@ Operand word_to_operand(char *word) {
             }
         }
         operand.type = LABEL;
-         strcpy(operand.label, word);
+        strcpy(operand.label, word);
     }
     return operand;
 }
@@ -190,14 +194,21 @@ Opcode word_to_opcode(char *word) {
     }
     return opcode;
 }
+void print_regs(CPU *cpu){
+    int quater= (sizeof(reg_names)/sizeof(reg_names[0])) >> 2;
+    for(int i = 0; i < quater ;i++){
+        for(int j = 0; j < quater; j++){
+            printf("[%s] = %lld\t", reg_names[quater *j+i], cpu->REGS[quater *j+i]);
+        }
+        printf("\n");
+    }
 
 
+}
 Instr *asembler(char file_name[], int *number_of_instructions) {
     // Open file
 
     Instr *instr_list = malloc(sizeof(Instr) * INSTRUCTION_BUF);
-
-    CPU cpu;
 
     FILE *fp = fopen(file_name, "r");
     if (fp == NULL) {
@@ -245,6 +256,7 @@ Instr *asembler(char file_name[], int *number_of_instructions) {
             instr_list[i] = instr;
             i++;
         }
+
         
     }
 
@@ -254,116 +266,166 @@ Instr *asembler(char file_name[], int *number_of_instructions) {
     return instr_list;
 }
 
+void execute_one(CPU *cpu, Instr *instr) {
+
+    int jumped = 0;
+
+    if (instr->opcode == MOV) {
+        if (instr->operand1.type == REG && instr->operand2.type == REG) {
+            cpu->REGS[instr->operand1.value] = cpu->REGS[instr->operand2.value];
+        } else if (instr->operand1.type == REG && instr->operand2.type == VALUE) {
+            cpu->REGS[instr->operand1.value] = instr->operand2.value;
+        } else if (instr->operand1.type == MEM_ADDR && instr->operand2.type == REG) {
+            if (instr->operand1.value < MEMSIZE) {
+                MEMORY[instr->operand1.value] = cpu->REGS[instr->operand2.value];
+            }
+        } else if (instr->operand1.type == MEM_ADDR && instr->operand2.type == VALUE) {
+            if (instr->operand1.value < MEMSIZE) {
+                MEMORY[instr->operand1.value] = instr->operand2.value;
+            }
+        }
+    } else if (instr->opcode == ADD) {
+        if (instr->operand1.type == REG && instr->operand2.type == REG) {
+            cpu->REGS[instr->operand1.value] += cpu->REGS[instr->operand2.value];
+        } else if (instr->operand1.type == REG && instr->operand2.type == VALUE) {
+            cpu->REGS[instr->operand1.value] += instr->operand2.value;
+        } else if (instr->operand1.type == MEM_ADDR && instr->operand2.type == REG) {
+            if (instr->operand1.value < MEMSIZE) {
+                MEMORY[instr->operand1.value] += cpu->REGS[instr->operand2.value];
+            }
+        } else if (instr->operand1.type == MEM_ADDR && instr->operand2.type == VALUE) {
+            if (instr->operand1.value < MEMSIZE) {
+                MEMORY[instr->operand1.value] += instr->operand2.value;
+            }
+        }
+    } else if (instr->opcode == SUB) {
+        if (instr->operand1.type == REG && instr->operand2.type == REG) {
+            cpu->REGS[instr->operand1.value] -= cpu->REGS[instr->operand2.value];
+        } else if (instr->operand1.type == REG && instr->operand2.type == VALUE) {
+            cpu->REGS[instr->operand1.value] -= instr->operand2.value;
+        } else if (instr->operand1.type == MEM_ADDR && instr->operand2.type == REG) {
+            if (instr->operand1.value < MEMSIZE) {
+                MEMORY[instr->operand1.value] -= cpu->REGS[instr->operand2.value];
+            }
+        } else if (instr->operand1.type == MEM_ADDR && instr->operand2.type == VALUE) {
+            if (instr->operand1.value < MEMSIZE) {
+                MEMORY[instr->operand1.value] -= instr->operand2.value;
+            }
+        }
+    } else if (instr->opcode == DEC) {
+        if (instr->operand1.type == REG) {
+            cpu->REGS[instr->operand1.value]--;
+        } else if (instr->operand1.type == MEM_ADDR) {
+            if (instr->operand1.value < MEMSIZE) {
+                MEMORY[instr->operand1.value]--;
+            }
+        }
+    } else if (instr->opcode == INC) {
+        if (instr->operand1.type == REG) {
+            cpu->REGS[instr->operand1.value]++;
+        } else if (instr->operand1.type == MEM_ADDR) {
+            if (instr->operand1.value < MEMSIZE) {
+                MEMORY[instr->operand1.value]++;
+            }
+        }
+    } else if (instr->opcode == CMP) {
+        if (instr->operand1.type == REG && instr->operand2.type == REG) {
+            if (cpu->REGS[instr->operand1.value] - cpu->REGS[instr->operand2.value] == 0)
+                cpu->flag[ZF] = 1;
+            else
+                cpu->flag[ZF] = 0;
+        } else if (instr->operand1.type == REG && instr->operand2.type == VALUE) {
+            if (cpu->REGS[instr->operand1.value] - instr->operand2.value == 0)
+                cpu->flag[ZF] = 1;
+            else
+                cpu->flag[ZF] = 0;
+        } else if (instr->operand1.type == MEM_ADDR && instr->operand2.type == REG) {
+            if (instr->operand1.value < MEMSIZE) {
+                if (MEMORY[instr->operand1.value] - cpu->REGS[instr->operand2.value] == 0)
+                    cpu->flag[ZF] = 1;
+                else
+                    cpu->flag[ZF] = 0;
+            }
+        } else if (instr->operand1.type == MEM_ADDR && instr->operand2.type == VALUE) {
+            if (instr->operand1.value < MEMSIZE) {
+                if (MEMORY[instr->operand1.value] - instr->operand2.value == 0)
+                    cpu->flag[ZF] = 1;
+                else
+                    cpu->flag[ZF] = 0;
+            }
+        }
+
+    } else if (instr->opcode == JE && cpu->flag[ZF]) {
+        for (int i = 0; i < last_lable_inex; i++) {
+            if (strcmp(label_arr[i].name, instr->operand1.label) == 0) {
+                cpu->pc = label_arr[i].address;
+                jumped = 1;
+            }
+        }
+
+    } else if (instr->opcode == JMP) {
+        for (int i = 0; i < last_lable_inex; i++) {
+            if (strcmp(label_arr[i].name, instr->operand1.label) == 0) {
+                cpu->pc = label_arr[i].address;
+                jumped = 1;
+            }
+        }
+    } else if (instr->opcode == PRINT) {
+        if (instr->operand1.type == REG) {
+            printf("%lld\n", cpu->REGS[instr->operand1.value]);
+        } else if (instr->operand1.type == MEM_ADDR) {
+            printf("%llu\n", MEMORY[instr->operand1.value]);
+        } else if (instr->operand1.type == VALUE) {
+            printf("%lld\n", instr->operand1.value);
+        }
+
+    } else if (instr->opcode == HALT) {
+        cpu->is_halted = 1;
+    }
+
+    if (!jumped) {
+        cpu->pc++;
+    }
+}
+
 void compiler(CPU *cpu, Instr *instructions, int number_of_instruction) {
-    
 
     Instr *instr = instructions;
 
-    while (cpu->pc < number_of_instruction) {
-        int jumped = 0;
+
+    while (cpu->pc < number_of_instruction && !cpu->is_halted) {
         instr = instructions + cpu->pc;
-        if (instr->opcode == MOV) {
-            if (instr->operand1.type == REG && instr->operand2.type == REG) {
-                cpu->REGS[instr->operand1.value] = cpu->REGS[instr->operand2.value];
-            } else if (instr->operand1.type == REG && instr->operand2.type == VALUE) {
-                cpu->REGS[instr->operand1.value] = instr->operand2.value;
-            } else if (instr->operand1.type == MEM_ADDR && instr->operand2.type == REG) {
-                if (instr->operand1.value < MEMSIZE) {
-                    MEMORY[instr->operand1.value] = cpu->REGS[instr->operand2.value];
-                }
-            } else if (instr->operand1.type == MEM_ADDR && instr->operand2.type == VALUE) {
-                if (instr->operand1.value < MEMSIZE) {
-                    MEMORY[instr->operand1.value] = instr->operand2.value;
-                }
-            }
-        } else if (instr->opcode == ADD) {
-            if (instr->operand1.type == REG && instr->operand2.type == REG) {
-                cpu->REGS[instr->operand1.value] += cpu->REGS[instr->operand2.value];
-            } else if (instr->operand1.type == REG && instr->operand2.type == VALUE) {
-                cpu->REGS[instr->operand1.value] += instr->operand2.value;
-            } else if (instr->operand1.type == MEM_ADDR && instr->operand2.type == REG) {
-                if (instr->operand1.value < MEMSIZE) {
-                    MEMORY[instr->operand1.value] += cpu->REGS[instr->operand2.value];
-                }
-            } else if (instr->operand1.type == MEM_ADDR && instr->operand2.type == VALUE) {
-                if (instr->operand1.value < MEMSIZE) {
-                    MEMORY[instr->operand1.value] += instr->operand2.value;
-                }
-            }
-        } else if (instr->opcode == SUB) {
-            if (instr->operand1.type == REG && instr->operand2.type == REG) {
-                cpu->REGS[instr->operand1.value] -= cpu->REGS[instr->operand2.value];
-            } else if (instr->operand1.type == REG && instr->operand2.type == VALUE) {
-                cpu->REGS[instr->operand1.value] -= instr->operand2.value;
-            } else if (instr->operand1.type == MEM_ADDR && instr->operand2.type == REG) {
-                if (instr->operand1.value < MEMSIZE) {
-                    MEMORY[instr->operand1.value] -= cpu->REGS[instr->operand2.value];
-                }
-            } else if (instr->operand1.type == MEM_ADDR && instr->operand2.type == VALUE) {
-                if (instr->operand1.value < MEMSIZE) {
-                    MEMORY[instr->operand1.value] -= instr->operand2.value;
-                }
-            }
-        } else if (instr->opcode == DEC) {
-            if (instr->operand1.type == REG) {
-                cpu->REGS[instr->operand1.value]--;
-            } else if (instr->operand1.type == MEM_ADDR) {
-                if (instr->operand1.value < MEMSIZE) {
-                    MEMORY[instr->operand1.value]--;
-                }
-            }
-        } else if (instr->opcode == INC) {
-            if (instr->operand1.type == REG) {
-                cpu->REGS[instr->operand1.value]++;
-            } else if (instr->operand1.type == MEM_ADDR) {
-                if (instr->operand1.value < MEMSIZE) {
-                    MEMORY[instr->operand1.value]++;
-                }
-            }
-        } else if (instr->opcode == CMP) {
-            if (instr->operand1.type == REG && instr->operand2.type == REG) {
-                if (cpu->REGS[instr->operand1.value] - cpu->REGS[instr->operand2.value] == 0)
-                    cpu->flag[ZF] = 1;
-                else
-                    cpu->flag[ZF] = 0;
-            } else if (instr->operand1.type == REG && instr->operand2.type == VALUE) {
-                if (cpu->REGS[instr->operand1.value] - instr->operand2.value == 0)
-                    cpu->flag[ZF] = 1;
-                else
-                    cpu->flag[ZF] = 0;
-            } else if (instr->operand1.type == MEM_ADDR && instr->operand2.type == REG) {
-                if (instr->operand1.value < MEMSIZE) {
-                    if (MEMORY[instr->operand1.value] - cpu->REGS[instr->operand2.value] == 0)
-                        cpu->flag[ZF] = 1;
-                    else
-                        cpu->flag[ZF] = 0;
-                }
-            } else if (instr->operand1.type == MEM_ADDR && instr->operand2.type == VALUE) {
-                if (instr->operand1.value < MEMSIZE) {
-                    if (MEMORY[instr->operand1.value] - instr->operand2.value == 0)
-                        cpu->flag[ZF] = 1;
-                    else
-                        cpu->flag[ZF] = 0;
-                }
-            }
+        execute_one(cpu, instr);
+    }
+}
 
-        } else if (instr->opcode == JMP && cpu->flag[ZF]) {
-            for(int i = 0; i < last_lable_inex;i++){
-                if(strcmp(label_arr[i].name,instr->operand1.label)==0){
-                    cpu->pc = label_arr[i].address;
-                    jumped = 1;
-                }   
-            }
+void debuger(CPU *cpu, Instr *instructions, int number_of_instruction) {
 
-        }
-    
-        if(!jumped){
-            cpu->pc++;
-        
+    Instr *instr = instructions;
+
+
+    while (cpu->pc < number_of_instruction && !cpu->is_halted) {
+        instr = instructions + cpu->pc;
+        execute_one(cpu, instr);
+        int choise = -1;
+        printf("What you want to see:\n 1 - REG info ");
+        while((choise = getchar())!='\n'){
+            if(choise == '1') print_regs(cpu);
+            if(choise == '0'){
+                int c;
+                while ((c = getchar()) != '\n' && c != EOF) { }
+                break;
+            } 
+            printf("\n");
+            printf("What you want to see:\n0 - nothing \n1 - REG info ");
+            int c;
+            while ((c = getchar()) != '\n' && c != EOF) { }
+
         }
         
     }
 }
+
 CPU *cpu_init(CPU *processor) {
     CPU *cpu = processor;
 
@@ -377,7 +439,7 @@ int main(void) {
     Instr *instr_list = asembler("program.asm", &number_of_instruction);
     CPU processor;
     CPU *cpu = cpu_init(&processor);
-    compiler(cpu, instr_list, number_of_instruction);
+    debuger(cpu, instr_list, number_of_instruction);
 
     free(instr_list);
 
