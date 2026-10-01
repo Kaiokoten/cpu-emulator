@@ -6,8 +6,9 @@
 #define LINE_BUFFER_SIZE 50
 #define MEMSIZE 4092
 #define INSTRUCTION_BUF 100
-#define FLAG_COUNTER 2
+#define FLAG_COUNTER 1
 #define LABEL_BUF_SIZE 50
+
 uint64_t MEMORY[MEMSIZE] = {0};
 
 typedef enum {
@@ -56,6 +57,7 @@ typedef enum {
     ZF
 } Flag_enum;
 
+const char *flag_names[] = {[ZF] = "ZF"};
 typedef struct {
     char name[LINE_BUFFER_SIZE];
     int address;
@@ -211,6 +213,35 @@ void print_regs(CPU *cpu) {
         printf("\n");
     }
 }
+void print_flags(CPU *cpu){
+    int flags_s = sizeof(cpu->flag) / sizeof(cpu->flag[0]);
+    for(int i = 0; i < flags_s; i++){
+        printf("[%s] = %d\t",flag_names[i], cpu->flag[i]);
+
+
+    }
+    printf("\n");
+}
+int is_valid_mem_addr(int64_t value){
+    return ((value >= 0 && value < MEMSIZE) ? 1 : 0);
+
+}
+
+void print_memory(void){
+    int count_line = 0;
+    char bit_number[sizeof(MEMORY[0]) *8+ 1];
+    bit_number[sizeof(MEMORY[0]) * 8] = '\0';
+    for(int i = 0; i < MEMSIZE; i++){
+        if(MEMORY[i] != 0){
+            for(int j = 0; j < sizeof(MEMORY[0])*8;j++){
+                bit_number[sizeof(MEMORY[0]) * 8 - 1 - j] = '0' + ((MEMORY[i] >> j) & 1);
+            }
+            printf("MEMORY[%d] = %s", i, bit_number);
+        }
+    }
+
+
+}
 Instr *asembler(char file_name[], int *number_of_instructions) {
     // Open file
 
@@ -309,11 +340,11 @@ void execute_one(CPU *cpu, Instr *instr) {
         } else if (instr->operand1.type == REG && instr->operand2.type == VALUE) {
             cpu->REGS[instr->operand1.value] = instr->operand2.value;
         } else if (instr->operand1.type == MEM_ADDR && instr->operand2.type == REG) {
-            if (instr->operand1.value < MEMSIZE) {
+            if (is_valid_mem_addr(instr->operand1.value)) {
                 MEMORY[instr->operand1.value] = cpu->REGS[instr->operand2.value];
             }
         } else if (instr->operand1.type == MEM_ADDR && instr->operand2.type == VALUE) {
-            if (instr->operand1.value < MEMSIZE) {
+            if (is_valid_mem_addr(instr->operand1.value)) {
                 MEMORY[instr->operand1.value] = instr->operand2.value;
             }
         }
@@ -323,11 +354,11 @@ void execute_one(CPU *cpu, Instr *instr) {
         } else if (instr->operand1.type == REG && instr->operand2.type == VALUE) {
             cpu->REGS[instr->operand1.value] += instr->operand2.value;
         } else if (instr->operand1.type == MEM_ADDR && instr->operand2.type == REG) {
-            if (instr->operand1.value < MEMSIZE) {
+            if (is_valid_mem_addr(instr->operand1.value)) {
                 MEMORY[instr->operand1.value] += cpu->REGS[instr->operand2.value];
             }
         } else if (instr->operand1.type == MEM_ADDR && instr->operand2.type == VALUE) {
-            if (instr->operand1.value < MEMSIZE) {
+            if (is_valid_mem_addr(instr->operand1.value)) {
                 MEMORY[instr->operand1.value] += instr->operand2.value;
             }
         }
@@ -337,11 +368,11 @@ void execute_one(CPU *cpu, Instr *instr) {
         } else if (instr->operand1.type == REG && instr->operand2.type == VALUE) {
             cpu->REGS[instr->operand1.value] -= instr->operand2.value;
         } else if (instr->operand1.type == MEM_ADDR && instr->operand2.type == REG) {
-            if (instr->operand1.value < MEMSIZE) {
+            if (is_valid_mem_addr(instr->operand1.value)) {
                 MEMORY[instr->operand1.value] -= cpu->REGS[instr->operand2.value];
             }
         } else if (instr->operand1.type == MEM_ADDR && instr->operand2.type == VALUE) {
-            if (instr->operand1.value < MEMSIZE) {
+            if (is_valid_mem_addr(instr->operand1.value)) {
                 MEMORY[instr->operand1.value] -= instr->operand2.value;
             }
         }
@@ -349,7 +380,7 @@ void execute_one(CPU *cpu, Instr *instr) {
         if (instr->operand1.type == REG) {
             cpu->REGS[instr->operand1.value]--;
         } else if (instr->operand1.type == MEM_ADDR) {
-            if (instr->operand1.value < MEMSIZE) {
+            if (is_valid_mem_addr(instr->operand1.value)) {
                 MEMORY[instr->operand1.value]--;
             }
         }
@@ -357,7 +388,7 @@ void execute_one(CPU *cpu, Instr *instr) {
         if (instr->operand1.type == REG) {
             cpu->REGS[instr->operand1.value]++;
         } else if (instr->operand1.type == MEM_ADDR) {
-            if (instr->operand1.value < MEMSIZE) {
+            if (is_valid_mem_addr(instr->operand1.value)) {
                 MEMORY[instr->operand1.value]++;
             }
         }
@@ -373,14 +404,14 @@ void execute_one(CPU *cpu, Instr *instr) {
             else
                 cpu->flag[ZF] = 0;
         } else if (instr->operand1.type == MEM_ADDR && instr->operand2.type == REG) {
-            if (instr->operand1.value < MEMSIZE) {
+            if (is_valid_mem_addr(instr->operand1.value)) {
                 if (MEMORY[instr->operand1.value] - cpu->REGS[instr->operand2.value] == 0)
                     cpu->flag[ZF] = 1;
                 else
                     cpu->flag[ZF] = 0;
             }
         } else if (instr->operand1.type == MEM_ADDR && instr->operand2.type == VALUE) {
-            if (instr->operand1.value < MEMSIZE) {
+            if (is_valid_mem_addr(instr->operand1.value)) {
                 if (MEMORY[instr->operand1.value] - instr->operand2.value == 0)
                     cpu->flag[ZF] = 1;
                 else
@@ -419,7 +450,7 @@ void execute_one(CPU *cpu, Instr *instr) {
     } else if (instr->opcode == PRINT) {
         if (instr->operand1.type == REG) {
             printf("%lld\n", cpu->REGS[instr->operand1.value]);
-        } else if (instr->operand1.type == MEM_ADDR) {
+        } else if (instr->operand1.type == MEM_ADDR && is_valid_mem_addr(instr->operand1.value)) {
             printf("%llu\n", MEMORY[instr->operand1.value]);
         } else if (instr->operand1.type == VALUE) {
             printf("%lld\n", instr->operand1.value);
@@ -450,20 +481,29 @@ void debuger(CPU *cpu, Instr *instructions, int number_of_instruction) {
 
     while (cpu->pc < number_of_instruction && !cpu->is_halted) {
         instr = instructions + cpu->pc;
+        int executed_pc = cpu->pc;
         execute_one(cpu, instr);
         int choise = -1;
-        printf("What you want to see:\n 1 - REG info ");
-        while ((choise = getchar()) != '\n') {
-            if (choise == '1')
-                print_regs(cpu);
+        printf("What you want to see:\n 1 - REG info\n2 - FLAGS info\n3 - MEMORY\n4 - pc\n");
+        while ((choise = getchar()) != '\n' && choise != EOF) {
             if (choise == '0') {
                 int c;
                 while ((c = getchar()) != '\n' && c != EOF) {
                 }
                 break;
+            }else if (choise == '1'){
+                print_regs(cpu);
+            }else if (choise == '2'){
+                print_flags(cpu);
+            }else if(choise == '3'){
+                print_memory();
+            }else if(choise == '4'){
+                printf("%d - command [%s]",executed_pc, opcode_names[instr->opcode]);
             }
+            
+            
             printf("\n");
-            printf("What you want to see:\n0 - nothing \n1 - REG info ");
+            printf("What you want to see:\n 1 - REG info\n2 - FLAGS info\n3 - MEMORY\n4 - pc\n");
             int c;
             while ((c = getchar()) != '\n' && c != EOF) {
             }
@@ -479,13 +519,24 @@ CPU *cpu_init(CPU *processor) {
     return cpu;
 }
 
-int main(void) {
+int main(int argc, char *argv[]) {
+    int file_given = 0;
+    char name_of_file[LINE_BUFFER_SIZE] = {0};
+    if (argc > 2) {
+        if(!strcmp(argv[1],"-f") && (strlen(argv[2]) < LINE_BUFFER_SIZE)){
+            strcpy(name_of_file,argv[2]);
+            file_given = 1;
+        }
+    } 
+
     int number_of_instruction;
-    Instr *instr_list = asembler("program.asm", &number_of_instruction);
+    
+    Instr *instr_list = asembler(file_given ? name_of_file : "program.asm", &number_of_instruction);
     if (instr_list == NULL)
         return 0;
     CPU processor;
     CPU *cpu = cpu_init(&processor);
+    
     debuger(cpu, instr_list, number_of_instruction);
 
     free(instr_list);
