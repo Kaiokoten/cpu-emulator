@@ -62,7 +62,7 @@ typedef struct {
 } Label;
 
 Label label_arr[LABEL_BUF_SIZE];
-int last_lable_inex = 0;
+int last_lable_index = 0;
 
 typedef struct {
     int64_t REGS[16];
@@ -96,8 +96,15 @@ typedef struct {
 
 int isnumber(char *word) {
     int i = 0;
-    if (word[0] == '-')
+
+    if (word[0] == '-') {
         i++;
+        if (word[i] == '\0') {
+            return 0;
+        }
+    } else if (word[0] == '\0')
+        return 0;
+
     for (; word[i] != '\0'; i++) {
         if (word[i] < '0' || word[i] > '9')
             return 0;
@@ -179,6 +186,7 @@ Operand word_to_operand(char *word) {
                 return operand;
             }
         }
+
         operand.type = LABEL;
         strcpy(operand.label, word);
     }
@@ -186,7 +194,7 @@ Operand word_to_operand(char *word) {
 }
 
 Opcode word_to_opcode(char *word) {
-    Opcode opcode;
+    Opcode opcode = -1;
     for (int i = 0; i < (sizeof(opcode_names) / sizeof(opcode_names[0])); i++) {
         if (strcmp(opcode_names[i], word) == 0) {
             opcode = i;
@@ -194,16 +202,14 @@ Opcode word_to_opcode(char *word) {
     }
     return opcode;
 }
-void print_regs(CPU *cpu){
-    int quater= (sizeof(reg_names)/sizeof(reg_names[0])) >> 2;
-    for(int i = 0; i < quater ;i++){
-        for(int j = 0; j < quater; j++){
-            printf("[%s] = %lld\t", reg_names[quater *j+i], cpu->REGS[quater *j+i]);
+void print_regs(CPU *cpu) {
+    int quater = (sizeof(reg_names) / sizeof(reg_names[0])) >> 2;
+    for (int i = 0; i < quater; i++) {
+        for (int j = 0; j < quater; j++) {
+            printf("[%s] = %lld\t", reg_names[quater * j + i], cpu->REGS[quater * j + i]);
         }
         printf("\n");
     }
-
-
 }
 Instr *asembler(char file_name[], int *number_of_instructions) {
     // Open file
@@ -220,44 +226,72 @@ Instr *asembler(char file_name[], int *number_of_instructions) {
     int i = 0;
 
     while (fgets(buf, LINE_BUFFER_SIZE, fp) != NULL) {
+        if (i == INSTRUCTION_BUF) {
+            printf("COMMAND OVERFLOW!");
+            return NULL;
+        }
+
         Instr instr;
         int line_s = 0;
         char **line = split(buf, ' ');
         int skip_line = 0;
         line_s = sizeof_dArr(line);
         skip_line = 0;
+
         switch (line_s) {
         case 0:
             skip_line = 1;
             break;
         case 1:
             if (is_line_label(line[0])) {
-                strcpy(label_arr[last_lable_inex].name, line[0]);
-                label_arr[last_lable_inex].address = i;
-                skip_line = 1;
-                last_lable_inex++;
+                if (last_lable_index < LABEL_BUF_SIZE) {
+                    strcpy(label_arr[last_lable_index].name, line[0]);
+                    label_arr[last_lable_index].address = i;
+                    skip_line = 1;
+                    last_lable_index++;
+                } else {
+                    printf("LABEL_BUF_SIZE OVERFLOW!");
+                    return NULL;
+                }
             } else {
                 instr.opcode = word_to_opcode(line[0]);
+                if (word_to_opcode(line[0]) == -1) {
+                    printf("Syntacsis error %s", buf);
+                    return NULL;
+                };
             }
 
             break;
         case 2:
             instr.opcode = word_to_opcode(line[0]);
+            if (word_to_opcode(line[0]) == -1) {
+                printf("Syntacsis error %s", buf);
+                return NULL;
+            };
             instr.operand1 = word_to_operand(line[1]);
             break;
         case 3:
             instr.opcode = word_to_opcode(line[0]);
+            if (word_to_opcode(line[0]) == -1) {
+                printf("Syntacsis error %s", buf);
+                return NULL;
+            };
             instr.operand1 = word_to_operand(line[1]);
             instr.operand2 = word_to_operand(line[2]);
 
             break;
+        default:
+            continue;
         }
+
         if (!skip_line) {
             instr_list[i] = instr;
             i++;
         }
-
-        
+        for(int k = 0; k < line_s; k++){
+            free(line[k]);
+        }
+        free(line);
     }
 
     *number_of_instructions = i;
@@ -269,7 +303,6 @@ Instr *asembler(char file_name[], int *number_of_instructions) {
 void execute_one(CPU *cpu, Instr *instr) {
 
     int jumped = 0;
-
     if (instr->opcode == MOV) {
         if (instr->operand1.type == REG && instr->operand2.type == REG) {
             cpu->REGS[instr->operand1.value] = cpu->REGS[instr->operand2.value];
@@ -356,20 +389,33 @@ void execute_one(CPU *cpu, Instr *instr) {
         }
 
     } else if (instr->opcode == JE && cpu->flag[ZF]) {
-        for (int i = 0; i < last_lable_inex; i++) {
+        int found = 0;
+        for (int i = 0; i < last_lable_index; i++) {
             if (strcmp(label_arr[i].name, instr->operand1.label) == 0) {
                 cpu->pc = label_arr[i].address;
                 jumped = 1;
+                found = 1;
             }
+        }
+        if (!found) {
+            printf("WRONG LABEL");
+            cpu->is_halted = 1;
         }
 
     } else if (instr->opcode == JMP) {
-        for (int i = 0; i < last_lable_inex; i++) {
+        int found = 0;
+        for (int i = 0; i < last_lable_index; i++) {
             if (strcmp(label_arr[i].name, instr->operand1.label) == 0) {
                 cpu->pc = label_arr[i].address;
                 jumped = 1;
+                found = 1;
             }
         }
+        if (!found) {
+            printf("WRONG LABEL");
+            cpu->is_halted = 1;
+        }
+        
     } else if (instr->opcode == PRINT) {
         if (instr->operand1.type == REG) {
             printf("%lld\n", cpu->REGS[instr->operand1.value]);
@@ -392,7 +438,6 @@ void compiler(CPU *cpu, Instr *instructions, int number_of_instruction) {
 
     Instr *instr = instructions;
 
-
     while (cpu->pc < number_of_instruction && !cpu->is_halted) {
         instr = instructions + cpu->pc;
         execute_one(cpu, instr);
@@ -403,26 +448,26 @@ void debuger(CPU *cpu, Instr *instructions, int number_of_instruction) {
 
     Instr *instr = instructions;
 
-
     while (cpu->pc < number_of_instruction && !cpu->is_halted) {
         instr = instructions + cpu->pc;
         execute_one(cpu, instr);
         int choise = -1;
         printf("What you want to see:\n 1 - REG info ");
-        while((choise = getchar())!='\n'){
-            if(choise == '1') print_regs(cpu);
-            if(choise == '0'){
+        while ((choise = getchar()) != '\n') {
+            if (choise == '1')
+                print_regs(cpu);
+            if (choise == '0') {
                 int c;
-                while ((c = getchar()) != '\n' && c != EOF) { }
+                while ((c = getchar()) != '\n' && c != EOF) {
+                }
                 break;
-            } 
+            }
             printf("\n");
             printf("What you want to see:\n0 - nothing \n1 - REG info ");
             int c;
-            while ((c = getchar()) != '\n' && c != EOF) { }
-
+            while ((c = getchar()) != '\n' && c != EOF) {
+            }
         }
-        
     }
 }
 
@@ -437,6 +482,8 @@ CPU *cpu_init(CPU *processor) {
 int main(void) {
     int number_of_instruction;
     Instr *instr_list = asembler("program.asm", &number_of_instruction);
+    if (instr_list == NULL)
+        return 0;
     CPU processor;
     CPU *cpu = cpu_init(&processor);
     debuger(cpu, instr_list, number_of_instruction);
