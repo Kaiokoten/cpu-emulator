@@ -213,34 +213,29 @@ void print_regs(CPU *cpu) {
         printf("\n");
     }
 }
-void print_flags(CPU *cpu){
+void print_flags(CPU *cpu) {
     int flags_s = sizeof(cpu->flag) / sizeof(cpu->flag[0]);
-    for(int i = 0; i < flags_s; i++){
-        printf("[%s] = %d\t",flag_names[i], cpu->flag[i]);
-
-
+    for (int i = 0; i < flags_s; i++) {
+        printf("[%s] = %d\t", flag_names[i], cpu->flag[i]);
     }
     printf("\n");
 }
-int is_valid_mem_addr(int64_t value){
+int is_valid_mem_addr(int64_t value) {
     return ((value >= 0 && value < MEMSIZE) ? 1 : 0);
-
 }
 
-void print_memory(void){
+void print_memory(void) {
     int count_line = 0;
-    char bit_number[sizeof(MEMORY[0]) *8+ 1];
+    char bit_number[sizeof(MEMORY[0]) * 8 + 1];
     bit_number[sizeof(MEMORY[0]) * 8] = '\0';
-    for(int i = 0; i < MEMSIZE; i++){
-        if(MEMORY[i] != 0){
-            for(int j = 0; j < sizeof(MEMORY[0])*8;j++){
+    for (int i = 0; i < MEMSIZE; i++) {
+        if (MEMORY[i] != 0) {
+            for (int j = 0; j < sizeof(MEMORY[0]) * 8; j++) {
                 bit_number[sizeof(MEMORY[0]) * 8 - 1 - j] = '0' + ((MEMORY[i] >> j) & 1);
             }
             printf("MEMORY[%d] = %s", i, bit_number);
         }
     }
-
-
 }
 Instr *asembler(char file_name[], int *number_of_instructions) {
     // Open file
@@ -319,7 +314,7 @@ Instr *asembler(char file_name[], int *number_of_instructions) {
             instr_list[i] = instr;
             i++;
         }
-        for(int k = 0; k < line_s; k++){
+        for (int k = 0; k < line_s; k++) {
             free(line[k]);
         }
         free(line);
@@ -446,7 +441,7 @@ void execute_one(CPU *cpu, Instr *instr) {
             printf("WRONG LABEL");
             cpu->is_halted = 1;
         }
-        
+
     } else if (instr->opcode == PRINT) {
         if (instr->operand1.type == REG) {
             printf("%lld\n", cpu->REGS[instr->operand1.value]);
@@ -484,26 +479,25 @@ void debuger(CPU *cpu, Instr *instructions, int number_of_instruction) {
         int executed_pc = cpu->pc;
         execute_one(cpu, instr);
         int choise = -1;
-        printf("What you want to see:\n 1 - REG info\n2 - FLAGS info\n3 - MEMORY\n4 - pc\n");
+        printf("What you want to see:\n1 - REG info\n2 - FLAGS info\n3 - MEMORY\n4 - pc\n");
         while ((choise = getchar()) != '\n' && choise != EOF) {
             if (choise == '0') {
                 int c;
                 while ((c = getchar()) != '\n' && c != EOF) {
                 }
                 break;
-            }else if (choise == '1'){
+            } else if (choise == '1') {
                 print_regs(cpu);
-            }else if (choise == '2'){
+            } else if (choise == '2') {
                 print_flags(cpu);
-            }else if(choise == '3'){
+            } else if (choise == '3') {
                 print_memory();
-            }else if(choise == '4'){
-                printf("%d - command [%s]",executed_pc, opcode_names[instr->opcode]);
+            } else if (choise == '4') {
+                printf("%d - command [%s]", executed_pc, opcode_names[instr->opcode]);
             }
-            
-            
+
             printf("\n");
-            printf("What you want to see:\n 1 - REG info\n2 - FLAGS info\n3 - MEMORY\n4 - pc\n");
+            printf("What you want to see:\n1 - REG info\n2 - FLAGS info\n3 - MEMORY\n4 - pc\n");
             int c;
             while ((c = getchar()) != '\n' && c != EOF) {
             }
@@ -521,23 +515,34 @@ CPU *cpu_init(CPU *processor) {
 
 int main(int argc, char *argv[]) {
     int file_given = 0;
+    int is_for_compiling_debuging = 0;
     char name_of_file[LINE_BUFFER_SIZE] = {0};
-    if (argc > 2) {
-        if(!strcmp(argv[1],"-f") && (strlen(argv[2]) < LINE_BUFFER_SIZE)){
-            strcpy(name_of_file,argv[2]);
+    if (argc > 3) {
+        if (!strcmp(argv[1], "-c") && !strcmp(argv[2], "-f") && (strlen(argv[3]) < LINE_BUFFER_SIZE)) {
+            strcpy(name_of_file, argv[3]);
             file_given = 1;
+            is_for_compiling_debuging = 1;
+        } else if (!strcmp(argv[1], "-d") && !strcmp(argv[2], "-f") && (strlen(argv[3]) < LINE_BUFFER_SIZE)) {
+            strcpy(name_of_file, argv[3]);
+            file_given = 1;
+            is_for_compiling_debuging = 2;
         }
-    } 
+    }
 
     int number_of_instruction;
-    
+
     Instr *instr_list = asembler(file_given ? name_of_file : "program.asm", &number_of_instruction);
     if (instr_list == NULL)
         return 0;
     CPU processor;
     CPU *cpu = cpu_init(&processor);
-    
-    debuger(cpu, instr_list, number_of_instruction);
+    if (is_for_compiling_debuging == 1) {
+        compiler(cpu, instr_list, number_of_instruction);
+    } else if (is_for_compiling_debuging == 2) {
+        debuger(cpu, instr_list, number_of_instruction);
+    } else {
+        debuger(cpu, instr_list, number_of_instruction);
+    }
 
     free(instr_list);
 
