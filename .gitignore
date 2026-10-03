@@ -4,3 +4,4 @@
 *.out
 *.pdb
 *.ilk
+tests/.build.log

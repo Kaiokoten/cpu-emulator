@@ -7,7 +7,7 @@ virtual CPU (16 registers, a flat memory array, flags)
 ## Build
 
 ```bash
-gcc -std=c99 -Wall -Wextra -g asm.c -o asm.exe
+gcc -std=c99 -Wall -Wextra -g src/*.c -o asm.exe
 ```
 
 ## Usage

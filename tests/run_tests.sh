@@ -4,7 +4,7 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 EXE="asm_test.exe"
 
 echo "Building asm.c..."
-gcc -std=c99 -Wall -Wextra -g "$PROJECT_DIR/asm.c" -o "$SCRIPT_DIR/$EXE" 2>"$SCRIPT_DIR/.build.log"
+gcc -std=c99 -Wall -Wextra -g "$PROJECT_DIR/src"/*.c -o "$SCRIPT_DIR/$EXE" 2>"$SCRIPT_DIR/.build.log"
 if [ ! -f "$SCRIPT_DIR/$EXE" ]; then
     echo "BUILD FAILED, see tests/.build.log"
     cat "$SCRIPT_DIR/.build.log"
