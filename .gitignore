@@ -6,4 +6,4 @@
 *.ilk
 tests/.build.log
 .vscode/
-Build/
+build/

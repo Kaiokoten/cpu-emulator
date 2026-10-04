@@ -18,7 +18,7 @@ gcc -std=c99 -Wall -Wextra -g src/*.c -o cpu-emulator.exe
 
 ```bash
 ./cpu-emulator.exe                    # run program.asm in interactive debugger mode
-./cpu-emulator.exe -c -f <file.asm>   # run <file.asm> non-interactively (batch mode)
+./cpu-emulator.exe -c -f <file.asm>   # run <file.asm> non-interactively (batch mode)   
 ./cpu-emulator.exe -d -f <file.asm>   # run <file.asm> in interactive debugger mode
 ```
 
@@ -44,5 +44,9 @@ equal (zero flag set).
 ```bash
 bash tests/run_tests.sh
 ```
-Builds the project and runs each `.asm` file in `tests/` through compiler
-mode, comparing its output against the matching `.expected` file.
+Builds the project and runs each `.asm` file in `tests/` in batch mode,
+ comparing its output against the matching `.expected` file.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
