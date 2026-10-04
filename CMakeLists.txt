@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 4.4.3 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 
 project(cpu-emulator LANGUAGES C)
 
@@ -16,4 +16,9 @@ add_executable(cpu-emulator
     src/ram.c
 )
 
-add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
+if(MSVC)                                                   
+    target_compile_options(cpu-emulator PRIVATE /W4)   
+    target_compile_definitions(cpu-emulator PRIVATE _CRT_SECURE_NO_WARNINGS)    
+else()                                                     
+    target_compile_options(cpu-emulator PRIVATE -Wall -Wextra)
+endif()
