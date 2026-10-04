@@ -135,8 +135,8 @@ Instr *asembler(const char file_name[], int *number_of_instructions) {
     Instr *instr_list = malloc(sizeof(Instr) * INSTRUCTION_BUF);
 
     FILE *fp = fopen(file_name, "r");
-    if (fp == NULL) {
-        printf("Couldnt't open the file!");
+    if (!fp) {
+        fprintf(stderr,"Couldn't open the file!\n");
         return NULL;
     }
 
@@ -145,7 +145,7 @@ Instr *asembler(const char file_name[], int *number_of_instructions) {
 
     while (fgets(buf, LINE_BUFFER_SIZE, fp) != NULL) {
         if (i == INSTRUCTION_BUF) {
-            printf("COMMAND OVERFLOW!");
+            fprintf(stderr,"COMMAND OVERFLOW!\n");
             return NULL;
         }
 
@@ -168,13 +168,13 @@ Instr *asembler(const char file_name[], int *number_of_instructions) {
                     skip_line = 1;
                     last_lable_index++;
                 } else {
-                    printf("LABEL_BUF_SIZE OVERFLOW!");
+                    fprintf(stderr,"LABEL_BUF_SIZE OVERFLOW!\n");
                     return NULL;
                 }
             } else {
                 instr.opcode = word_to_opcode(line[0]);
                 if (word_to_opcode(line[0]) == -1) {
-                    printf("Syntacsis error %s", buf);
+                    fprintf(stderr,"Syntax error %s", buf);
                     return NULL;
                 };
             }
@@ -183,7 +183,7 @@ Instr *asembler(const char file_name[], int *number_of_instructions) {
         case 2:
             instr.opcode = word_to_opcode(line[0]);
             if (word_to_opcode(line[0]) == -1) {
-                printf("Syntacsis error %s", buf);
+                fprintf(stderr,"Syntax error %s", buf);
                 return NULL;
             };
             instr.operand1 = word_to_operand(line[1]);
@@ -191,7 +191,7 @@ Instr *asembler(const char file_name[], int *number_of_instructions) {
         case 3:
             instr.opcode = word_to_opcode(line[0]);
             if (word_to_opcode(line[0]) == -1) {
-                printf("Syntacsis error %s", buf);
+                fprintf(stderr,"Syntax error %s", buf);
                 return NULL;
             };
             instr.operand1 = word_to_operand(line[1]);
@@ -217,7 +217,7 @@ Instr *asembler(const char file_name[], int *number_of_instructions) {
             continue;
         int address = find_label(op->label);
         if (address < 0) {
-            printf("Unknown label %s\n", op->label);
+            fprintf(stderr,"Unknown label %s\n", op->label);
             return NULL;
         }
         op->value = address;

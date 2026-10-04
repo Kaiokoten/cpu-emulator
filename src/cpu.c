@@ -129,7 +129,7 @@ CPU *cpu_init(CPU *processor) {
     return cpu;
 }
 
-void compiler(CPU *cpu, Instr *instructions, int number_of_instruction) {
+void cpu_run(CPU *cpu, Instr *instructions, int number_of_instruction) {
 
     Instr *instr = instructions;
 

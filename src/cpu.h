@@ -18,6 +18,6 @@ typedef struct {
 
 CPU *cpu_init(CPU *processor);
 void execute_one(CPU *cpu, Instr *instr);
-void compiler(CPU *cpu, Instr *instructions, int number_of_instruction);
+void cpu_run(CPU *cpu, Instr *instructions, int number_of_instruction);
 
 #endif

@@ -22,7 +22,7 @@ for asm_file in *.asm; do
     if [ ! -f "$expected_file" ]; then
         continue
     fi
-    actual="$(./"$EXE" -c -f "$asm_file" 2>&1 | tr -d '\r')"
+    actual="$(./"$EXE" -r "$asm_file" 2>&1 | tr -d '\r')"
     expected="$(cat "$expected_file" | tr -d '\r')"
     if [ "$actual" == "$expected" ]; then
         echo "PASS: $name"

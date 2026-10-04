@@ -17,9 +17,9 @@ gcc -std=c99 -Wall -Wextra -g src/*.c -o cpu-emulator.exe
 ## Usage
 
 ```bash
-./cpu-emulator.exe                    # run program.asm in interactive debugger mode
-./cpu-emulator.exe -c -f <file.asm>   # run <file.asm> non-interactively (batch mode)   
-./cpu-emulator.exe -d -f <file.asm>   # run <file.asm> in interactive debugger mode
+./cpu-emulator.exe -h                  # run in help mode
+./cpu-emulator.exe -r <file.asm>   # run <file.asm> non-interactively (batch mode)   
+./cpu-emulator.exe -d <file.asm>   # run <file.asm> in interactive debugger mode
 ```
 
 In debugger mode, after each instruction you can inspect:
