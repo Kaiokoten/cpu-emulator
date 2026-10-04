@@ -1,15 +1,19 @@
 # CPU Emulator
 
-A CPU emulator and assembler written in C with compiler and debugger. Parses a custom assembly
+A CPU emulator in C with an assembler and a step-by-step debugger. Parses a custom assembly
 language into an internal instruction list, then executes it on a simple
 virtual CPU (16 registers, a flat memory array, flags)
 
 ## Build
 
 ```bash
-gcc -std=c99 -Wall -Wextra -g src/*.c -o asm.exe
+cmake -S . -B build
+cmake --build build --config Release
 ```
-
+Or directly with gcc:
+```bash
+gcc -std=c99 -Wall -Wextra -g src/*.c -o cpu-emulator.exe
+```
 ## Usage
 
 ```bash

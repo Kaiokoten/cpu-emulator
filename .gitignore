@@ -5,3 +5,5 @@
 *.pdb
 *.ilk
 tests/.build.log
+.vscode/
+Build/
