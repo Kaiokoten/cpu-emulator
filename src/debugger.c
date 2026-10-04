@@ -4,7 +4,6 @@
 
 #include "ram.h"
 
-
 static const char *const flag_names[] = {[ZF] = "ZF"};
 
 void print_regs(CPU *cpu) {
@@ -24,12 +23,12 @@ void print_flags(CPU *cpu) {
     printf("\n");
 }
 void print_memory(void) {
-    int count_line = 0;
+
     char bit_number[sizeof(MEMORY[0]) * 8 + 1];
     bit_number[sizeof(MEMORY[0]) * 8] = '\0';
     for (int i = 0; i < MEMSIZE; i++) {
         if (MEMORY[i] != 0) {
-            for (int j = 0; j < sizeof(MEMORY[0]) * 8; j++) {
+            for (size_t j = 0; j < sizeof(MEMORY[0]) * 8; j++) {
                 bit_number[sizeof(MEMORY[0]) * 8 - 1 - j] = '0' + ((MEMORY[i] >> j) & 1);
             }
             printf("MEMORY[%d] = %s", i, bit_number);

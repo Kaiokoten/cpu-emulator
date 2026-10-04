@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-
 typedef struct {
     char name[LINE_BUFFER_SIZE];
     int address;
@@ -13,7 +12,6 @@ typedef struct {
 
 static Label label_arr[LABEL_BUF_SIZE];
 static int last_lable_index = 0;
-
 
 static int find_label(const char *name) {
     for (int i = 0; i < last_lable_index; i++) {
@@ -108,7 +106,8 @@ Operand word_to_operand(char *word) {
         operand.type = VALUE;
         operand.value = strtol(word, NULL, 10);
     } else {
-        for (int i = 0; i < (sizeof(reg_names) / sizeof(reg_names[0])); i++) {
+
+        for (int i = 0; i < REG_COUNT; i++) {
             if (strcmp(reg_names[i], word) == 0) {
                 operand.type = REG;
                 operand.value = i;
@@ -122,14 +121,12 @@ Operand word_to_operand(char *word) {
     return operand;
 }
 
-Opcode word_to_opcode(char *word) {
-    Opcode opcode = -1;
-    for (int i = 0; i < (sizeof(opcode_names) / sizeof(opcode_names[0])); i++) {
-        if (strcmp(opcode_names[i], word) == 0) {
-            opcode = i;
-        }
+int word_to_opcode(char *word) {
+    for (int i = 0; i < OPCODE_COUNT; i++) {
+        if (strcmp(opcode_names[i], word) == 0)
+            return i;
     }
-    return opcode;
+    return -1;
 }
 
 Instr *asembler(const char file_name[], int *number_of_instructions) {
@@ -152,7 +149,7 @@ Instr *asembler(const char file_name[], int *number_of_instructions) {
             return NULL;
         }
 
-        Instr instr;
+        Instr instr = {0};
         int line_s = 0;
         char **line = split(buf, ' ');
         int skip_line = 0;
