@@ -13,6 +13,7 @@ typedef struct {
     int flag[FLAG_COUNTER];
     int pc;
     int is_halted;
+    int err_exit;
 
 } CPU;
 

@@ -61,6 +61,6 @@ int main(int argc, char *argv[]) {
     }
 
     free(instr_list);
-
+    if(cpu->err_exit == 1) return 1;
     return 0;
 }

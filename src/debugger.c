@@ -6,7 +6,7 @@
 
 static const char *const flag_names[] = {[ZF] = "ZF"};
 
-void print_regs(CPU *cpu) {
+static void print_regs(CPU *cpu) {
     int quater = (sizeof(reg_names) / sizeof(reg_names[0])) >> 2;
     for (int i = 0; i < quater; i++) {
         for (int j = 0; j < quater; j++) {
@@ -15,14 +15,14 @@ void print_regs(CPU *cpu) {
         printf("\n");
     }
 }
-void print_flags(CPU *cpu) {
+static void print_flags(CPU *cpu) {
     int flags_s = sizeof(cpu->flag) / sizeof(cpu->flag[0]);
     for (int i = 0; i < flags_s; i++) {
         printf("[%s] = %d\t", flag_names[i], cpu->flag[i]);
     }
     printf("\n");
 }
-void print_memory(void) {
+static void print_memory(void) {
 
     char bit_number[sizeof(MEMORY[0]) * 8 + 1];
     bit_number[sizeof(MEMORY[0]) * 8] = '\0';
@@ -40,7 +40,7 @@ void debuger(CPU *cpu, Instr *instructions, int number_of_instruction) {
 
     Instr *instr = instructions;
 
-    while (cpu->pc < number_of_instruction && !cpu->is_halted) {
+    while (cpu->pc < number_of_instruction && !cpu->is_halted && cpu->err_exit != 1) {
         instr = instructions + cpu->pc;
         int executed_pc = cpu->pc;
         execute_one(cpu, instr);

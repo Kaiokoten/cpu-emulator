@@ -21,7 +21,7 @@ static int find_label(const char *name) {
     return -1;
 }
 
-int isnumber(char *word) {
+static int isnumber(char *word) {
     int i = 0;
 
     if (word[0] == '-') {
@@ -39,14 +39,14 @@ int isnumber(char *word) {
     return 1;
 }
 
-int sizeof_dArr(char **a) {
+static int sizeof_dArr(char **a) {
     int length = 0;
     while (a[length] != NULL)
         length++;
 
     return length;
 }
-int is_line_label(char *line) {
+static int is_line_label(char *line) {
     int i = 0;
     for (; line[i] != '\0' && line[i] != ':'; i++) {
     }
@@ -57,7 +57,7 @@ int is_line_label(char *line) {
     return 0;
 }
 
-char **split(char line[], char symbol) {
+static char **split(char line[], char symbol) {
     int i = 0;
     int j = 0;
     char **words = (char **)malloc((LINE_BUFFER_SIZE) * (sizeof(char *)));
@@ -86,7 +86,7 @@ char **split(char line[], char symbol) {
     return words;
 }
 
-Operand word_to_operand(char *word) {
+static Operand word_to_operand(char *word) {
     Operand operand;
 
     int k = 0;
@@ -121,7 +121,7 @@ Operand word_to_operand(char *word) {
     return operand;
 }
 
-int word_to_opcode(char *word) {
+static int word_to_opcode(char *word) {
     for (int i = 0; i < OPCODE_COUNT; i++) {
         if (strcmp(opcode_names[i], word) == 0)
             return i;
