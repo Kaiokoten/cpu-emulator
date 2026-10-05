@@ -1,6 +1,7 @@
 
 #include "assembler.h"
 
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -31,6 +32,14 @@ static int find_label(const char *name, Assembler *assembler) {
     return -1;
 }
 
+static int equals_ignore_case(const char *a, const char *b) {
+    int i = 0;
+    for (; a[i] != '\0' && b[i] != 0; i++) {
+        if(!(toupper((unsigned char)a[i]) == toupper((unsigned char)b[i]))) return 0;
+    }
+    if(a[i] == '\0' && b[i] == '\0') return 1; 
+    return 0;
+}
 static int isnumber(char *word) {
     int i = 0;
 
@@ -66,43 +75,42 @@ static int is_line_label(char *line) {
     }
     return 0;
 }
-static void line_free(char **line, int size){
-    for(int i = 0; i < size;i++){
+static void line_free(char **line, int size) {
+    for (int i = 0; i < size; i++) {
         free(line[i]);
     }
     free(line);
 }
-static char **split(char line[], char symbol) {
+static int char_is_end(char a) {
+    if (a == '\n' || a == '\r' || a == COMMENT_SYMBOL || a == '\0')
+        return 1;
+    return 0;
+}
+static int char_is_split(char a) {
+    if (a == '\t' || a == ' ' || a == ',')
+        return 1;
+    return 0;
+}
+static char **split(char line[]) {
     int i = 0;
     int j = 0;
     char **words = (char **)malloc((LINE_BUF_SIZE) * (sizeof(char *)));
 
     int k = 0;
-    while (line[i] == symbol)
+    while (char_is_split(line[i]))
         i++;
 
-    while (line[i] != '\0' && line[i] != EOF && line[i] != '\n' && line[i] != COMMENT_SYMBOL) {
+    while (!char_is_end(line[i])) {
         char *word = malloc(LINE_BUF_SIZE);
-        for (; line[i] != '\n' && line[i] != symbol && line[i] != '\0' && line[i] != EOF && line[i] != ',' &&
-               line[i] != COMMENT_SYMBOL;
-             i++) {
+        for (; !char_is_end(line[i]) && !char_is_split(line[i]); i++) {
             word[k] = line[i];
             k++;
-        }
-        if (word[k] == COMMENT_SYMBOL) {
-            word[k] = '\0';
-            words[j] = word;
-            return words;
         }
         word[k] = '\0';
         k = 0;
         words[j] = word;
         j++;
-
-        if (line[i] == '\0' || line[i] == EOF || line[i] == '\n')
-            break;
-        i++;
-        while (line[i] == symbol || line[i] == ',')
+        while (char_is_split(line[i]))
             i++;
     }
     words[j] = NULL;
@@ -116,7 +124,6 @@ static Operand word_to_operand(char *word, int line_number, Assembler *assembler
 
     for (; word[k] != '\0'; k++) {
     }
-
     if (word[0] == '[') {
         if (word[k - 1] != ']') {
             fprintf(stderr, "line %d: missing ']' in %s\n", line_number, word);
@@ -136,7 +143,7 @@ static Operand word_to_operand(char *word, int line_number, Assembler *assembler
     } else {
 
         for (int i = 0; i < REG_COUNT; i++) {
-            if (strcmp(reg_names[i], word) == 0) {
+            if (equals_ignore_case(word, reg_names[i])) {
                 operand.type = REG;
                 operand.value = i;
                 return operand;
@@ -151,7 +158,7 @@ static Operand word_to_operand(char *word, int line_number, Assembler *assembler
 
 static int word_to_opcode(char *word) {
     for (int i = 0; i < OPCODE_COUNT; i++) {
-        if (strcmp(opcode_names[i], word) == 0)
+        if (equals_ignore_case(word, opcode_names[i]))
             return i;
     }
     return -1;
@@ -187,6 +194,10 @@ Instr *assemble(const char file_name[], int *number_of_instructions) {
     int instruction_number = 0;
 
     while (fgets(buf, LINE_BUF_SIZE, fp) != NULL) {
+        if (strchr(buf, '\n') == NULL && feof(fp) == 0) {
+            fprintf(stderr, "line %d: %.15s... too long.\n", line_number, buf);
+            return NULL;
+        }
         if (assembler.last_label_index == assembler.label_arr_max_size) {
             Label *plabel = (Label *)realloc(assembler.label_arr, 2 * sizeof(Label) * assembler.last_label_index);
             if (plabel == NULL) {
@@ -208,7 +219,7 @@ Instr *assemble(const char file_name[], int *number_of_instructions) {
 
         Instr instr = {0};
         int line_s = 0;
-        char **line = split(buf, ' ');
+        char **line = split(buf);
         int skip_line = 0;
         line_s = sizeof_dArr(line);
         char **no_label_line = line;
@@ -224,12 +235,11 @@ Instr *assemble(const char file_name[], int *number_of_instructions) {
             no_label_line++;
             no_label_line_s--;
         }
-        if (no_label_line_s == 0){
+        if (no_label_line_s == 0) {
             line_number++;
-            line_free(line,line_s);
+            line_free(line, line_s);
             continue;
-        }
-        else {
+        } else {
             int opcode = word_to_opcode(no_label_line[0]);
             if (opcode == -1) {
                 fprintf(stderr, "line %d: Syntax error: %s opcode was not found.\n", line_number, no_label_line[0]);
@@ -255,7 +265,7 @@ Instr *assemble(const char file_name[], int *number_of_instructions) {
             return NULL;
         }
         if (assembler.exit_error == 1) {
-            line_free(line,line_s);
+            line_free(line, line_s);
             return NULL;
         }
         if (!skip_line) {
@@ -265,7 +275,7 @@ Instr *assemble(const char file_name[], int *number_of_instructions) {
         }
         line_number++;
 
-        line_free(line,line_s);
+        line_free(line, line_s);
     }
 
     for (int n = 0; n < instruction_number; n++) {
