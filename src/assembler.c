@@ -6,17 +6,27 @@
 #include <string.h>
 
 typedef struct {
-    char name[LINE_BUFFER_SIZE];
+    char name[LINE_BUF_SIZE];
     int address;
 } Label;
 
-static Label label_arr[LABEL_BUF_SIZE];
-static int last_lable_index = 0;
+typedef struct {
+    Instr *instr_arr;
+    Label *label_arr;
 
-static int find_label(const char *name) {
-    for (int i = 0; i < last_lable_index; i++) {
-        if (strcmp(label_arr[i].name, name) == 0)
-            return label_arr[i].address;
+    int last_label_index;
+    int last_instr_index;
+
+    int label_arr_max_size;
+    int instr_arr_max_size;
+
+    int exit_error;
+} Assembler;
+
+static int find_label(const char *name, Assembler *assembler) {
+    for (int i = 0; i < assembler->last_label_index; i++) {
+        if (strcmp(assembler->label_arr[i].name, name) == 0)
+            return assembler->label_arr[i].address;
     }
     return -1;
 }
@@ -56,20 +66,33 @@ static int is_line_label(char *line) {
     }
     return 0;
 }
-
+static void line_free(char **line, int size){
+    for(int i = 0; i < size;i++){
+        free(line[i]);
+    }
+    free(line);
+}
 static char **split(char line[], char symbol) {
     int i = 0;
     int j = 0;
-    char **words = (char **)malloc((LINE_BUFFER_SIZE) * (sizeof(char *)));
+    char **words = (char **)malloc((LINE_BUF_SIZE) * (sizeof(char *)));
 
     int k = 0;
     while (line[i] == symbol)
         i++;
-    while (line[i] != '\0' && line[i] != EOF && line[i] != '\n') {
-        char *word = malloc(LINE_BUFFER_SIZE);
-        for (; line[i] != '\n' && line[i] != symbol && line[i] != '\0' && line[i] != EOF; i++) {
+
+    while (line[i] != '\0' && line[i] != EOF && line[i] != '\n' && line[i] != COMMENT_SYMBOL) {
+        char *word = malloc(LINE_BUF_SIZE);
+        for (; line[i] != '\n' && line[i] != symbol && line[i] != '\0' && line[i] != EOF && line[i] != ',' &&
+               line[i] != COMMENT_SYMBOL;
+             i++) {
             word[k] = line[i];
             k++;
+        }
+        if (word[k] == COMMENT_SYMBOL) {
+            word[k] = '\0';
+            words[j] = word;
+            return words;
         }
         word[k] = '\0';
         k = 0;
@@ -79,22 +102,27 @@ static char **split(char line[], char symbol) {
         if (line[i] == '\0' || line[i] == EOF || line[i] == '\n')
             break;
         i++;
-        while (line[i] == symbol)
+        while (line[i] == symbol || line[i] == ',')
             i++;
     }
     words[j] = NULL;
     return words;
 }
 
-static Operand word_to_operand(char *word) {
-    Operand operand;
+static Operand word_to_operand(char *word, int line_number, Assembler *assembler) {
+    Operand operand = {0};
 
     int k = 0;
 
-    for (; word[k] != '\0' && word[k] != ','; k++) {
+    for (; word[k] != '\0'; k++) {
     }
-    word[k] = '\0';
+
     if (word[0] == '[') {
+        if (word[k - 1] != ']') {
+            fprintf(stderr, "line %d: missing ']' in %s\n", line_number, word);
+            assembler->exit_error = 1;
+            return operand;
+        }
         word += 1;
         int i = 0;
         for (; word[i] != '\0' && word[i] != ']' && word[i] != ','; i++) {
@@ -128,25 +156,54 @@ static int word_to_opcode(char *word) {
     }
     return -1;
 }
+Assembler *assembler_init(Assembler *assembler) {
 
-Instr *asembler(const char file_name[], int *number_of_instructions) {
-    // Open file
+    assembler->exit_error = 0;
 
-    Instr *instr_list = malloc(sizeof(Instr) * INSTRUCTION_BUF);
+    assembler->label_arr = (Label *)malloc(sizeof(Label) * LABEL_BUF_SIZE);
+    assembler->last_label_index = 0;
+    assembler->instr_arr = (Instr *)malloc(sizeof(Instr) * INSTRUCTION_BUF_SIZE);
+    assembler->last_instr_index = 0;
+
+    assembler->label_arr_max_size = LABEL_BUF_SIZE;
+    assembler->instr_arr_max_size = INSTRUCTION_BUF_SIZE;
+    return assembler;
+}
+
+Instr *assemble(const char file_name[], int *number_of_instructions) {
+
+    Assembler assembler;
+    assembler = *assembler_init(&assembler);
 
     FILE *fp = fopen(file_name, "r");
+
     if (!fp) {
-        fprintf(stderr,"Couldn't open the file!\n");
+        fprintf(stderr, "Couldn't open the file!\n");
         return NULL;
     }
 
-    char buf[LINE_BUFFER_SIZE];
-    int i = 0;
+    char buf[LINE_BUF_SIZE];
+    int line_number = 1;
+    int instruction_number = 0;
 
-    while (fgets(buf, LINE_BUFFER_SIZE, fp) != NULL) {
-        if (i == INSTRUCTION_BUF) {
-            fprintf(stderr,"COMMAND OVERFLOW!\n");
-            return NULL;
+    while (fgets(buf, LINE_BUF_SIZE, fp) != NULL) {
+        if (assembler.last_label_index == assembler.label_arr_max_size) {
+            Label *plabel = (Label *)realloc(assembler.label_arr, 2 * sizeof(Label) * assembler.last_label_index);
+            if (plabel == NULL) {
+                fprintf(stderr, "line %d: LABEL STACK OVERFLOW.\n", line_number);
+                return NULL;
+            }
+            assembler.label_arr = plabel;
+            assembler.label_arr_max_size *= 2;
+        }
+        if (assembler.last_instr_index == assembler.instr_arr_max_size) {
+            Instr *pinstr = (Instr *)realloc(assembler.instr_arr, 2 * sizeof(Instr) * assembler.last_instr_index);
+            if (pinstr == NULL) {
+                fprintf(stderr, "line %d: INSTRUCTION STACK OVERFLOW.\n", line_number);
+                return NULL;
+            }
+            assembler.instr_arr = pinstr;
+            assembler.instr_arr_max_size *= 2;
         }
 
         Instr instr = {0};
@@ -154,76 +211,78 @@ Instr *asembler(const char file_name[], int *number_of_instructions) {
         char **line = split(buf, ' ');
         int skip_line = 0;
         line_s = sizeof_dArr(line);
-        skip_line = 0;
-
-        switch (line_s) {
-        case 0:
-            skip_line = 1;
-            break;
-        case 1:
-            if (is_line_label(line[0])) {
-                if (last_lable_index < LABEL_BUF_SIZE) {
-                    strcpy(label_arr[last_lable_index].name, line[0]);
-                    label_arr[last_lable_index].address = i;
-                    skip_line = 1;
-                    last_lable_index++;
-                } else {
-                    fprintf(stderr,"LABEL_BUF_SIZE OVERFLOW!\n");
-                    return NULL;
-                }
-            } else {
-                instr.opcode = word_to_opcode(line[0]);
-                if (word_to_opcode(line[0]) == -1) {
-                    fprintf(stderr,"Syntax error %s", buf);
-                    return NULL;
-                };
-            }
-
-            break;
-        case 2:
-            instr.opcode = word_to_opcode(line[0]);
-            if (word_to_opcode(line[0]) == -1) {
-                fprintf(stderr,"Syntax error %s", buf);
-                return NULL;
-            };
-            instr.operand1 = word_to_operand(line[1]);
-            break;
-        case 3:
-            instr.opcode = word_to_opcode(line[0]);
-            if (word_to_opcode(line[0]) == -1) {
-                fprintf(stderr,"Syntax error %s", buf);
-                return NULL;
-            };
-            instr.operand1 = word_to_operand(line[1]);
-            instr.operand2 = word_to_operand(line[2]);
-
-            break;
-        default:
+        char **no_label_line = line;
+        int no_label_line_s = line_s;
+        if (line_s == 0) {
+            line_number++;
             continue;
         }
+        if (is_line_label(line[0])) {
+            strcpy(assembler.label_arr[assembler.last_label_index].name, line[0]);
+            assembler.label_arr[assembler.last_label_index].address = instruction_number;
+            assembler.last_label_index++;
+            no_label_line++;
+            no_label_line_s--;
+        }
+        if (no_label_line_s == 0){
+            line_number++;
+            line_free(line,line_s);
+            continue;
+        }
+        else {
+            int opcode = word_to_opcode(no_label_line[0]);
+            if (opcode == -1) {
+                fprintf(stderr, "line %d: Syntax error: %s opcode was not found.\n", line_number, no_label_line[0]);
+                assembler.exit_error = 1;
+                return NULL;
+            }
+            instr.opcode = opcode;
+        };
+        switch (no_label_line_s) {
 
+        case 3:
+            instr.operand2 = word_to_operand(no_label_line[2], line_number, &assembler);
+        /* fall through */
+        case 2:
+            instr.operand1 = word_to_operand(no_label_line[1], line_number, &assembler);
+        /* fall through */
+        case 1:
+            break;
+
+        default:
+            fprintf(stderr, "line %d: More operands then expected. %s\n", line_number, buf);
+            assembler.exit_error = 1;
+            return NULL;
+        }
+        if (assembler.exit_error == 1) {
+            line_free(line,line_s);
+            return NULL;
+        }
         if (!skip_line) {
-            instr_list[i] = instr;
-            i++;
+            assembler.instr_arr[assembler.last_instr_index] = instr;
+            assembler.last_instr_index++;
+            instruction_number++;
         }
-        for (int k = 0; k < line_s; k++) {
-            free(line[k]);
-        }
-        free(line);
+        line_number++;
+
+        line_free(line,line_s);
     }
-    for (int n = 0; n < i; n++) {
-        Operand *op = &instr_list[n].operand1;
+
+    for (int n = 0; n < instruction_number; n++) {
+        Operand *op = &assembler.instr_arr[n].operand1;
         if (op->type != LABEL)
             continue;
-        int address = find_label(op->label);
+        int address = find_label(op->label, &assembler);
         if (address < 0) {
-            fprintf(stderr,"Unknown label %s\n", op->label);
+            fprintf(stderr, "Unknown label %s.\n", op->label);
             return NULL;
         }
         op->value = address;
     }
-    *number_of_instructions = i;
+    free(assembler.label_arr);
+
+    *number_of_instructions = instruction_number;
 
     fclose(fp);
-    return instr_list;
+    return assembler.instr_arr;
 }

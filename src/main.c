@@ -39,7 +39,7 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "Unknown option: %s\n", argv[1]);
             return 1;
         }
-        instr_list = asembler(argv[2], &number_of_instruction);
+        instr_list = assemble(argv[2], &number_of_instruction);
 
     } else {
         fprintf(stderr, "Please, use options\n");

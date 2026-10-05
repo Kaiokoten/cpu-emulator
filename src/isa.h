@@ -4,10 +4,11 @@
 #include <stdint.h>
 
 #define OPCODE_COUNT 10
-#define LINE_BUFFER_SIZE 50
 #define REG_COUNT 16
 #define LABEL_SIZE 50
-#define INSTRUCTION_BUF 100
+
+#define LINE_BUF_SIZE 150
+#define INSTRUCTION_BUF_SIZE 100
 #define LABEL_BUF_SIZE 50
 
 typedef enum { MOV, ADD, DEC, INC, SUB, CMP, JMP, JE, HALT, PRINT } Opcode;

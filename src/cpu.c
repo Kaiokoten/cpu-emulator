@@ -72,10 +72,7 @@ void execute_one(CPU *cpu, Instr *instr) {
             return;
 
     } else if (instr->opcode == CMP) {
-        if ((op_to_val(cpu, &instr->operand1)) - op_to_val(cpu, &instr->operand2) == 0) {
-            cpu->flag[ZF] = 1;
-        } else
-            cpu->flag[ZF] = 0;
+        cpu->flag[ZF] = !((op_to_val(cpu, &instr->operand1)) - op_to_val(cpu, &instr->operand2));
 
     } else if (instr->opcode == JE && cpu->flag[ZF]) {
         cpu->pc = (int)instr->operand1.value;

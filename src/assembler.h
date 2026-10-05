@@ -2,7 +2,7 @@
 #define ASSEMBLER_H
 
 #include "isa.h"
-
-Instr *asembler(const char *file_name, int *number_of_instructions);
+#define COMMENT_SYMBOL '#'
+Instr *assemble(const char *file_name, int *number_of_instructions);
 
 #endif
