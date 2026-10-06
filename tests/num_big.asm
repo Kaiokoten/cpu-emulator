@@ -1,0 +1,5 @@
+mov RAX, 3000000000
+print RAX
+mov RBX, -9000000000000000000
+print RBX
+halt

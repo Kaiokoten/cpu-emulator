@@ -93,11 +93,14 @@ One instruction per line:
 | Kind | Syntax | Can be `dst` |
 |---|---|---|
 | Register | `RAX`, `RBX`, `RCX`, `RDX`, `RSI`, `RDI`, `RBP`, `RSP`, `R8`–`R15` | yes |
-| Memory cell | `[N]`, where `0 <= N < 4096` | yes |
-| Immediate | a decimal integer, e.g. `42` or `-7` | no |
+| Memory cell | `[N]`, where `N` is a decimal number from `0` to `4095` | yes |
+| Immediate | a decimal integer with an optional sign, e.g. `42`, `-7`, `+5` | no |
 | Label | a name declared with `name:` (only for `jmp` / `je`) | no |
 
-Registers and memory cells hold signed 64-bit integers.
+Registers and memory cells hold signed 64-bit integers, so immediates range
+from `-9223372036854775808` to `9223372036854775807`. Only decimal notation is
+supported. A word that starts with a digit or a sign is always parsed as a
+number, so label names cannot start with a digit.
 
 ### Errors
 
@@ -106,21 +109,16 @@ it runs, for example:
 
 ```
 line 1: Syntax error: movx opcode was not found.
-```
-
-Accessing a memory cell outside `0..4095` stops the program at run time:
-
-```
-Memory access out of bounds at address 5000
+line 1: memory address out of range '[5000]'.
 ```
 
 ### Known limitations
 
-- Immediate values are parsed as 32-bit on Windows (`3000000000` becomes
-  `2147483647`).
 - The number and types of operands are not fully validated yet, so some
   invalid instructions are only detected at run time.
 - There is no stack, no `call`/`ret`, and `ZF` is the only flag.
+- Memory addresses must be constants: indirect addressing such as `[RAX]`
+  is not supported.
 
 ## Tests
 

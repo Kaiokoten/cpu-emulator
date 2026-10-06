@@ -2,9 +2,12 @@
 #include "assembler.h"
 
 #include <ctype.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include "ram.h"
 
 typedef struct {
     char name[LINE_BUF_SIZE];
@@ -35,27 +38,12 @@ static int find_label(const char *name, Assembler *assembler) {
 static int equals_ignore_case(const char *a, const char *b) {
     int i = 0;
     for (; a[i] != '\0' && b[i] != 0; i++) {
-        if(!(toupper((unsigned char)a[i]) == toupper((unsigned char)b[i]))) return 0;
+        if (!(toupper((unsigned char)a[i]) == toupper((unsigned char)b[i])))
+            return 0;
     }
-    if(a[i] == '\0' && b[i] == '\0') return 1; 
+    if (a[i] == '\0' && b[i] == '\0')
+        return 1;
     return 0;
-}
-static int isnumber(char *word) {
-    int i = 0;
-
-    if (word[0] == '-') {
-        i++;
-        if (word[i] == '\0') {
-            return 0;
-        }
-    } else if (word[0] == '\0')
-        return 0;
-
-    for (; word[i] != '\0'; i++) {
-        if (word[i] < '0' || word[i] > '9')
-            return 0;
-    }
-    return 1;
 }
 
 static int sizeof_dArr(char **a) {
@@ -119,6 +107,9 @@ static char **split(char line[]) {
 
 static Operand word_to_operand(char *word, int line_number, Assembler *assembler) {
     Operand operand = {0};
+    // Errors
+    errno = 0;
+    char *end;
 
     int k = 0;
 
@@ -132,14 +123,34 @@ static Operand word_to_operand(char *word, int line_number, Assembler *assembler
         }
         word += 1;
         int i = 0;
-        for (; word[i] != '\0' && word[i] != ']' && word[i] != ','; i++) {
+        for (; word[i] != '\0' && word[i] != ']'; i++) {
         }
         word[i] = '\0';
         operand.type = MEM_ADDR;
-        operand.value = strtol(word, NULL, 10);
-    } else if (isnumber(word)) {
+        operand.value = strtoll(word, &end, 10);
+        if (errno == ERANGE || operand.value < 0 || operand.value >= MEMSIZE) {
+            fprintf(stderr, "line %d: memory address out of range '[%s]'.\n", line_number, word);
+            assembler->exit_error = 1;
+            return operand;
+        }
+        if (end == word || *end != '\0') {
+            fprintf(stderr, "line %d: invalid memory address '[%s]'.\n", line_number, word);
+            assembler->exit_error = 1;
+            return operand;
+        }
+    } else if (word[0] == '+' || word[0] == '-' || isdigit((unsigned char)word[0])) {
         operand.type = VALUE;
-        operand.value = strtol(word, NULL, 10);
+        operand.value = strtoll(word, &end, 10);
+        if (errno == ERANGE) {
+            fprintf(stderr, "line %d: number out of range '%s'.\n", line_number, word);
+            assembler->exit_error = 1;
+            return operand;
+        }
+        if (*end != '\0') {
+            fprintf(stderr, "line %d: invalid number '%s'.\n", line_number, word);
+            assembler->exit_error = 1;
+            return operand;
+        }
     } else {
 
         for (int i = 0; i < REG_COUNT; i++) {
