@@ -75,27 +75,34 @@ One instruction per line:
 
 ### Instructions
 
-| Instruction | Effect |
-|---|---|
-| `mov dst, src` | `dst = src` |
-| `add dst, src` | `dst = dst + src` |
-| `sub dst, src` | `dst = dst - src` |
-| `inc dst` | `dst = dst + 1` |
-| `dec dst` | `dst = dst - 1` |
-| `cmp a, b` | sets the zero flag `ZF` to 1 if `a == b`, otherwise to 0 |
-| `jmp label` | jumps to `label` |
-| `je label` | jumps to `label` if `ZF` is 1 |
-| `print src` | prints the value of `src` followed by a newline |
-| `halt` | stops the program |
+Operand kinds: **r** — register, **m** — memory cell, **i** — immediate,
+**l** — label.
+
+| Instruction | Operands | Effect |
+|---|---|---|
+| `mov dst, src` | `dst`: r, m; `src`: r, m, i | `dst = src` |
+| `add dst, src` | `dst`: r, m; `src`: r, m, i | `dst = dst + src` |
+| `sub dst, src` | `dst`: r, m; `src`: r, m, i | `dst = dst - src` |
+| `inc dst` | `dst`: r, m | `dst = dst + 1` |
+| `dec dst` | `dst`: r, m | `dst = dst - 1` |
+| `cmp a, b` | `a`: r, m, i; `b`: r, m, i | sets the zero flag `ZF` to 1 if `a == b`, otherwise to 0 |
+| `jmp label` | l | jumps to `label` |
+| `je label` | l | jumps to `label` if `ZF` is 1 |
+| `print src` | r, m, i | prints the value of `src` followed by a newline |
+| `halt` | — | stops the program |
+
+The assembler checks both the number of operands and their kinds, so an
+instruction such as `mov 5, RAX` or `jmp RAX` is rejected before the program
+runs.
 
 ### Operands
 
-| Kind | Syntax | Can be `dst` |
-|---|---|---|
-| Register | `RAX`, `RBX`, `RCX`, `RDX`, `RSI`, `RDI`, `RBP`, `RSP`, `R8`–`R15` | yes |
-| Memory cell | `[N]`, where `N` is a decimal number from `0` to `4095` | yes |
-| Immediate | a decimal integer with an optional sign, e.g. `42`, `-7`, `+5` | no |
-| Label | a name declared with `name:` (only for `jmp` / `je`) | no |
+| Kind | Syntax |
+|---|---|
+| Register | `RAX`, `RBX`, `RCX`, `RDX`, `RSI`, `RDI`, `RBP`, `RSP`, `R8`–`R15` |
+| Memory cell | `[N]`, where `N` is a decimal number from `0` to `4095` |
+| Immediate | a decimal integer with an optional sign, e.g. `42`, `-7`, `+5` |
+| Label | a name declared with `name:` |
 
 Registers and memory cells hold signed 64-bit integers, so immediates range
 from `-9223372036854775808` to `9223372036854775807`. Only decimal notation is
@@ -110,12 +117,14 @@ it runs, for example:
 ```
 line 1: Syntax error: movx opcode was not found.
 line 1: memory address out of range '[5000]'.
+line 2: 'MOV' requires 2 operands, got 1.
+line 3: 'JMP' operand 1 has a wrong type.
 ```
 
 ### Known limitations
 
-- The number and types of operands are not fully validated yet, so some
-  invalid instructions are only detected at run time.
+- Label declarations are not validated yet: duplicate labels and labels
+  named like a register or an opcode are accepted.
 - There is no stack, no `call`/`ret`, and `ZF` is the only flag.
 - Memory addresses must be constants: indirect addressing such as `[RAX]`
   is not supported.

@@ -27,6 +27,30 @@ typedef struct {
     int exit_error;
 } Assembler;
 
+enum { ALLOW_REG = 1, ALLOW_MEM = 2, ALLOW_VAL = 4, ALLOW_LABEL = 8 };
+
+typedef struct {
+    int number_of_operands;
+    int arg_types[2];
+
+} InstructionRule;
+
+static const InstructionRule instruction_allow[] = {
+    [MOV] = {2, {ALLOW_REG | ALLOW_MEM, ALLOW_REG | ALLOW_MEM | ALLOW_VAL}},
+    [ADD] = {2, {ALLOW_REG | ALLOW_MEM, ALLOW_REG | ALLOW_MEM | ALLOW_VAL}},
+    [SUB] = {2, {ALLOW_REG | ALLOW_MEM, ALLOW_REG | ALLOW_MEM | ALLOW_VAL}},
+
+    [DEC] = {1, {ALLOW_REG | ALLOW_MEM}},
+    [INC] = {1, {ALLOW_REG | ALLOW_MEM}},
+
+    [CMP] = {2, {ALLOW_MEM | ALLOW_REG | ALLOW_VAL, ALLOW_MEM | ALLOW_REG | ALLOW_VAL}},
+    [JMP] = {1, {ALLOW_LABEL}},
+    [JE] = {1, {ALLOW_LABEL}},
+    [HALT] = {0, {0}},
+    [PRINT] = {1, {ALLOW_MEM | ALLOW_REG | ALLOW_VAL}}
+
+};
+
 static int find_label(const char *name, Assembler *assembler) {
     for (int i = 0; i < assembler->last_label_index; i++) {
         if (strcmp(assembler->label_arr[i].name, name) == 0)
@@ -174,6 +198,35 @@ static int word_to_opcode(char *word) {
     }
     return -1;
 }
+static int operand_bit(Type_of_operand type){
+    switch(type){
+        case REG: return ALLOW_REG;
+        case MEM_ADDR: return ALLOW_MEM;
+        case VALUE: return ALLOW_VAL;
+        case LABEL: return ALLOW_LABEL;
+        default:
+            break;
+    }
+    return 0;
+}
+
+static int validate_instruction(const Instr *instr, int operand_count, int line_number) {
+    if(operand_count != instruction_allow[instr->opcode].number_of_operands){
+        fprintf(stderr, "line %d: '%s' requires %d operands, got %d.\n",line_number,opcode_names[instr->opcode],instruction_allow[instr->opcode].number_of_operands, operand_count);
+        return 0;
+    }
+    const Operand ops[2] = {instr->operand1,instr->operand2};
+    const InstructionRule *rule = &instruction_allow[instr->opcode];
+
+    for(int i = 0; i < rule->number_of_operands; i++){
+        if((operand_bit(ops[i].type) & rule->arg_types[i]) == 0){
+            fprintf(stderr, "line %d: '%s' operand %d has a wrong type.\n",line_number, opcode_names[instr->opcode], i + 1);
+            return 0;
+        } 
+    }
+    return 1;
+}
+
 Assembler *assembler_init(Assembler *assembler) {
 
     assembler->exit_error = 0;
@@ -269,17 +322,17 @@ Instr *assemble(const char file_name[], int *number_of_instructions) {
         /* fall through */
         case 1:
             break;
-
-        default:
-            fprintf(stderr, "line %d: More operands then expected. %s\n", line_number, buf);
-            assembler.exit_error = 1;
-            return NULL;
         }
         if (assembler.exit_error == 1) {
             line_free(line, line_s);
             return NULL;
         }
         if (!skip_line) {
+            if(validate_instruction(&instr,no_label_line_s - 1,line_number) == 0){
+                assembler.exit_error = 1;
+                line_free(line, line_s);
+                return NULL;
+            }
             assembler.instr_arr[assembler.last_instr_index] = instr;
             assembler.last_instr_index++;
             instruction_number++;
