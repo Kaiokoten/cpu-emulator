@@ -25,8 +25,6 @@ typedef struct {
     int label_arr_max_size;
     int instr_arr_max_size;
 
-    
-
     int exit_error;
 
 } Assembler;
@@ -226,10 +224,10 @@ static int validate_label(const Assembler *assembler, const char *name, int line
         fprintf(stderr, "line %d: label '%s' empty.\n", line_number, name);
         return 0;
     }
-    if (isalpha((unsigned char) name[0]) || name[0] == '_') {
+    if (isalpha((unsigned char)name[0]) || name[0] == '_') {
         i++;
         for (; name[i] != '\0'; i++) {
-            if (!(isalpha((unsigned char) name[i]) || name[i] == '_' || isdigit((unsigned char) name[i]))) {
+            if (!(isalpha((unsigned char)name[i]) || name[i] == '_' || isdigit((unsigned char)name[i]))) {
                 fprintf(stderr, "line %d: label '%s' contains an invalid symbol.\n", line_number, name);
                 return 0;
             }
@@ -336,6 +334,17 @@ Instr *assemble(const char file_name[], int *number_of_instructions) {
             assembler.instr_lines = plines;
 
             assembler.instr_arr_max_size = new_size;
+        }
+        if (assembler.last_label_index == assembler.label_arr_max_size) {
+            int new_size = assembler.label_arr_max_size * 2;
+
+            Label *plabel = realloc(assembler.label_arr, sizeof(*plabel) * new_size);
+            if (plabel == NULL) {
+                fprintf(stderr, "line %d: out of memory.\n", line_number);
+                return NULL;
+            }
+            assembler.label_arr = plabel;
+            assembler.label_arr_max_size = new_size;
         }
 
         Instr instr = {0};
