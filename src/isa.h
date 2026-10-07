@@ -5,7 +5,7 @@
 
 #define OPCODE_COUNT 10
 #define REG_COUNT 16
-#define LABEL_SIZE 50
+#define LABEL_NAME_SIZE 50
 
 #define LINE_BUF_SIZE 150
 #define INSTRUCTION_BUF_SIZE 100
@@ -18,7 +18,7 @@ typedef enum { RAX, RBX, RCX, RDX, RSI, RDI, RBP, RSP, R8, R9, R10, R11, R12, R1
 typedef struct {
     Type_of_operand type;
     int64_t value;
-    char label[LABEL_SIZE];
+    char label[LABEL_NAME_SIZE];
 } Operand;
 
 typedef struct {

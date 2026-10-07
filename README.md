@@ -69,7 +69,11 @@ One instruction per line:
 - **Case:** opcodes and register names are case-insensitive (`MOV rax, 5`
   is valid); labels are case-sensitive (`Loop` and `loop` are different labels).
 - **Labels** are declared as `name:`, either on their own line or before an
-  instruction on the same line (`start: inc RAX`).
+  instruction on the same line (`start: inc RAX`). A jump may refer to a label
+  declared later in the file.
+- **Label names** start with a letter or `_`, continue with letters, digits
+  or `_` (`loop_2`, `_start`), are at most 49 characters long, must not
+  repeat a register or an opcode name (in any case), and must be unique.
 - Empty lines are ignored; both LF and CRLF line endings are accepted.
 - A line can be at most 149 characters long.
 
@@ -107,7 +111,7 @@ runs.
 Registers and memory cells hold signed 64-bit integers, so immediates range
 from `-9223372036854775808` to `9223372036854775807`. Only decimal notation is
 supported. A word that starts with a digit or a sign is always parsed as a
-number, so label names cannot start with a digit.
+number.
 
 ### Errors
 
@@ -119,12 +123,12 @@ line 1: Syntax error: movx opcode was not found.
 line 1: memory address out of range '[5000]'.
 line 2: 'MOV' requires 2 operands, got 1.
 line 3: 'JMP' operand 1 has a wrong type.
+line 3: label 'a' mentioned multiple times.
+line 5: Syntax error: nowhere label was not found.
 ```
 
 ### Known limitations
 
-- Label declarations are not validated yet: duplicate labels and labels
-  named like a register or an opcode are accepted.
 - There is no stack, no `call`/`ret`, and `ZF` is the only flag.
 - Memory addresses must be constants: indirect addressing such as `[RAX]`
   is not supported.
