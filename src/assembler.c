@@ -19,8 +19,8 @@ typedef struct {
     int *instr_lines;
     Label *label_arr;
 
-    int last_label_index;
-    int last_instr_index;
+    int label_count;
+    int instr_count;
 
     int label_arr_max_size;
     int instr_arr_max_size;
@@ -54,7 +54,7 @@ static const InstructionRule instruction_allow[] = {
 };
 
 static int find_label(const char *name, const Assembler *assembler) {
-    for (int i = 0; i < assembler->last_label_index; i++) {
+    for (int i = 0; i < assembler->label_count; i++) {
         if (strcmp(assembler->label_arr[i].name, name) == 0)
             return assembler->label_arr[i].address;
     }
@@ -72,7 +72,7 @@ static int equals_ignore_case(const char *a, const char *b) {
     return 0;
 }
 
-static int sizeof_dArr(char **a) {
+static int count_words(char **a) {
     int length = 0;
     while (a[length] != NULL)
         length++;
@@ -288,15 +288,15 @@ static int validate_instruction(const Instr *instr, int operand_count, int line_
     }
     return 1;
 }
-int assembler_init(Assembler *assembler) {
+static int assembler_init(Assembler *assembler) {
     assembler->exit_error = 0;
 
     if ((assembler->label_arr = (Label *)malloc(sizeof(Label) * LABEL_BUF_SIZE)) == NULL)
         return 0;
-    assembler->last_label_index = 0;
+    assembler->label_count = 0;
     if ((assembler->instr_arr = (Instr *)malloc(sizeof(Instr) * INSTRUCTION_BUF_SIZE)) == NULL)
         return 0;
-    assembler->last_instr_index = 0;
+    assembler->instr_count = 0;
 
     assembler->label_arr_max_size = LABEL_BUF_SIZE;
     assembler->instr_arr_max_size = INSTRUCTION_BUF_SIZE;
@@ -336,7 +336,7 @@ Instr *assemble(const char file_name[], int *number_of_instructions) {
             fprintf(stderr, "line %d: %.15s... too long.\n", line_number, buf);
             goto fail;
         }
-        if (assembler.last_instr_index == assembler.instr_arr_max_size) {
+        if (assembler.instr_count == assembler.instr_arr_max_size) {
             int new_size = assembler.instr_arr_max_size * 2;
 
             Instr *pinstr = realloc(assembler.instr_arr, sizeof(*pinstr) * new_size);
@@ -355,7 +355,7 @@ Instr *assemble(const char file_name[], int *number_of_instructions) {
 
             assembler.instr_arr_max_size = new_size;
         }
-        if (assembler.last_label_index == assembler.label_arr_max_size) {
+        if (assembler.label_count == assembler.label_arr_max_size) {
             int new_size = assembler.label_arr_max_size * 2;
 
             Label *plabel = realloc(assembler.label_arr, sizeof(*plabel) * new_size);
@@ -375,7 +375,7 @@ Instr *assemble(const char file_name[], int *number_of_instructions) {
             goto fail;
         }
         int skip_line = 0;
-        line_s = sizeof_dArr(line);
+        line_s = count_words(line);
         char **no_label_line = line;
         int no_label_line_s = line_s;
         if (line_s == 0) {
@@ -389,9 +389,9 @@ Instr *assemble(const char file_name[], int *number_of_instructions) {
                 line_free(line, line_s);
                 goto fail;
             }
-            strcpy(assembler.label_arr[assembler.last_label_index].name, line[0]);
-            assembler.label_arr[assembler.last_label_index].address = instruction_number;
-            assembler.last_label_index++;
+            strcpy(assembler.label_arr[assembler.label_count].name, line[0]);
+            assembler.label_arr[assembler.label_count].address = instruction_number;
+            assembler.label_count++;
             no_label_line++;
             no_label_line_s--;
         }
@@ -431,9 +431,9 @@ Instr *assemble(const char file_name[], int *number_of_instructions) {
                 line_free(line, line_s);
                 goto fail;
             }
-            assembler.instr_arr[assembler.last_instr_index] = instr;
-            assembler.instr_lines[assembler.last_instr_index] = line_number;
-            assembler.last_instr_index++;
+            assembler.instr_arr[assembler.instr_count] = instr;
+            assembler.instr_lines[assembler.instr_count] = line_number;
+            assembler.instr_count++;
             instruction_number++;
         }
         line_number++;

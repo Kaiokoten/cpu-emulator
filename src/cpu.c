@@ -12,16 +12,16 @@ static int64_t op_to_val(CPU *cpu, Operand *op) {
             val = MEMORY[op->value];
         else {
             fprintf(stderr, "Memory access out of bounds at address %lld\n", op->value);
-            cpu->err_exit = 1;
+            cpu->error = 1;
         }
 
     } else if (op->type == VALUE) {
         val = op->value;
     } else if (op->type == REG) {
-        val = cpu->REGS[op->value];
+        val = cpu->regs[op->value];
     } else {
         fprintf(stderr, "Operand has to be Reg or Memory or Value type\n");
-        cpu->err_exit = 1;
+        cpu->error = 1;
     }
 
     return val;
@@ -33,13 +33,13 @@ static int64_t *op_to_addr(CPU *cpu, Operand *op) {
             val = &MEMORY[op->value];
         else {
             fprintf(stderr, "Memory access out of bounds at address %lld\n", op->value);
-            cpu->err_exit = 1;
+            cpu->error = 1;
         }
     } else if (op->type == REG) {
-        val = &cpu->REGS[op->value];
+        val = &cpu->regs[op->value];
     } else {
         fprintf(stderr, "First Operand has to be Reg or Memory type\n");
-        cpu->err_exit = 1;
+        cpu->error = 1;
     }
     return val;
 }
@@ -50,7 +50,7 @@ void execute_one(CPU *cpu, Instr *instr) {
     if (instr->opcode == MOV || instr->opcode == ADD || instr->opcode == SUB) {
         int64_t *first_operand_addr = op_to_addr(cpu, &instr->operand1);
         int64_t second_operand = op_to_val(cpu, &instr->operand2);
-        if (cpu->err_exit != 1) {
+        if (cpu->error != 1) {
             if (instr->opcode == MOV)
                 *first_operand_addr = second_operand;
             else if (instr->opcode == ADD)
@@ -63,7 +63,7 @@ void execute_one(CPU *cpu, Instr *instr) {
 
     else if (instr->opcode == DEC || instr->opcode == INC) {
         int64_t *first_operand_addr = op_to_addr(cpu, &instr->operand1);
-        if (cpu->err_exit != 1) {
+        if (cpu->error != 1) {
             if (instr->opcode == INC)
                 (*first_operand_addr)++;
             else if (instr->opcode == DEC)
@@ -84,7 +84,7 @@ void execute_one(CPU *cpu, Instr *instr) {
     } else if (instr->opcode == PRINT) {
 
         int64_t to_print = op_to_val(cpu, &instr->operand1);
-        if (cpu->err_exit != 1) {
+        if (cpu->error != 1) {
             printf("%lld\n", to_print);
         }
 
@@ -110,7 +110,7 @@ void cpu_run(CPU *cpu, Instr *instructions, int number_of_instruction) {
 
     Instr *instr = instructions;
 
-    while (cpu->pc < number_of_instruction && !cpu->is_halted && cpu->err_exit != 1) {
+    while (cpu->pc < number_of_instruction && !cpu->is_halted && cpu->error != 1) {
         instr = instructions + cpu->pc;
         execute_one(cpu, instr);
     }

@@ -5,7 +5,7 @@
 #include "assembler.h"
 #include "cpu.h"
 #include "debugger.h"
-void print_help(void) {
+static void print_help(void) {
     printf("Options:\n");
     printf("%-26s %s\n", "-h, --help", "Display this help message");
     printf("%-26s %s\n", "-r \"file.asm\"", "run <file.asm> non-interactively (batch mode)");
@@ -14,7 +14,7 @@ void print_help(void) {
 
 int main(int argc, char *argv[]) {
     int number_of_instruction;
-    int is_for_debugging = -1;
+    int debug_mode = -1;
     Instr *instr_list = NULL;
     if (argc == 1) {
         fprintf(stderr, "Please, use options\n");
@@ -32,9 +32,9 @@ int main(int argc, char *argv[]) {
     } else if (argc == 3) {
 
         if (!strcmp(argv[1], "-r")) {
-            is_for_debugging = 0;
+            debug_mode = 0;
         } else if (!strcmp(argv[1], "-d")) {
-            is_for_debugging = 1;
+            debug_mode = 1;
         } else {
             fprintf(stderr, "Unknown option: %s\n", argv[1]);
             return 1;
@@ -54,13 +54,13 @@ int main(int argc, char *argv[]) {
     CPU processor;
     CPU *cpu = cpu_init(&processor);
 
-    if (is_for_debugging == 0) {
+    if (debug_mode == 0) {
         cpu_run(cpu, instr_list, number_of_instruction);
-    } else if (is_for_debugging == 1) {
-        debuger(cpu, instr_list, number_of_instruction);
+    } else if (debug_mode == 1) {
+        debuger_run(cpu, instr_list, number_of_instruction);
     }
 
     free(instr_list);
-    if(cpu->err_exit == 1) return 1;
+    if(cpu->error == 1) return 1;
     return 0;
 }

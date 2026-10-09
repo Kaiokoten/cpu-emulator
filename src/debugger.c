@@ -7,10 +7,10 @@
 static const char *const flag_names[] = {[ZF] = "ZF"};
 
 static void print_regs(CPU *cpu) {
-    int quater = (sizeof(reg_names) / sizeof(reg_names[0])) >> 2;
-    for (int i = 0; i < quater; i++) {
-        for (int j = 0; j < quater; j++) {
-            printf("[%s] = %lld\t", reg_names[quater * j + i], cpu->REGS[quater * j + i]);
+    int quarter = (sizeof(reg_names) / sizeof(reg_names[0])) >> 2;
+    for (int i = 0; i < quarter; i++) {
+        for (int j = 0; j < quarter; j++) {
+            printf("[%s] = %lld\t", reg_names[quarter * j + i], cpu->regs[quarter * j + i]);
         }
         printf("\n");
     }
@@ -36,29 +36,29 @@ static void print_memory(void) {
     }
 }
 
-void debuger(CPU *cpu, Instr *instructions, int number_of_instruction) {
+void debuger_run(CPU *cpu, Instr *instructions, int number_of_instruction) {
 
     Instr *instr = instructions;
 
-    while (cpu->pc < number_of_instruction && !cpu->is_halted && cpu->err_exit != 1) {
+    while (cpu->pc < number_of_instruction && !cpu->is_halted && cpu->error != 1) {
         instr = instructions + cpu->pc;
         int executed_pc = cpu->pc;
         execute_one(cpu, instr);
-        int choise = -1;
+        int choice = -1;
         printf("What you want to see:\n1 - REG info\n2 - FLAGS info\n3 - MEMORY\n4 - pc\n");
-        while ((choise = getchar()) != '\n' && choise != EOF) {
-            if (choise == '0') {
+        while ((choice = getchar()) != '\n' && choice != EOF) {
+            if (choice == '0') {
                 int c;
                 while ((c = getchar()) != '\n' && c != EOF) {
                 }
                 break;
-            } else if (choise == '1') {
+            } else if (choice == '1') {
                 print_regs(cpu);
-            } else if (choise == '2') {
+            } else if (choice == '2') {
                 print_flags(cpu);
-            } else if (choise == '3') {
+            } else if (choice == '3') {
                 print_memory();
-            } else if (choise == '4') {
+            } else if (choice == '4') {
                 printf("%d - command [%s]", executed_pc, opcode_names[instr->opcode]);
             }
 

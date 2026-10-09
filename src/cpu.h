@@ -9,12 +9,11 @@ typedef enum { ZF } Flag_enum;
 
 typedef struct {
 
-    int64_t REGS[16];
+    int64_t regs[16];
     int flag[FLAG_COUNTER];
     int pc;
     int is_halted;
-    int err_exit;
-
+    int error;
 } CPU;
 
 CPU *cpu_init(CPU *processor);
