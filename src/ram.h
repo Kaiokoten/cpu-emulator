@@ -5,8 +5,11 @@
 
 #define MEMSIZE 4096
 
-extern int64_t MEMORY[MEMSIZE];
+typedef struct{
+    int64_t cells[MEMSIZE];
+}Memory;
 
+void memory_init(Memory *mem);
 int is_valid_mem_addr(int64_t addr);
 
 #endif

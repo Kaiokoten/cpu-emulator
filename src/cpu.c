@@ -8,8 +8,8 @@
 static int64_t op_to_val(CPU *cpu, Operand *op) {
     int64_t val = 0;
     if (op->type == MEM_ADDR) {
-        if (op->value < MEMSIZE && op->value >= 0)
-            val = MEMORY[op->value];
+        if (is_valid_mem_addr(op->value))
+            val = cpu->mem->cells[op->value];
         else {
             fprintf(stderr, "Memory access out of bounds at address %lld\n", op->value);
             cpu->error = 1;
@@ -29,8 +29,8 @@ static int64_t op_to_val(CPU *cpu, Operand *op) {
 static int64_t *op_to_addr(CPU *cpu, Operand *op) {
     int64_t *val = NULL;
     if (op->type == MEM_ADDR) {
-        if (op->value < MEMSIZE && op->value >= 0)
-            val = &MEMORY[op->value];
+        if (is_valid_mem_addr(op->value))
+            val = &cpu->mem->cells[op->value];
         else {
             fprintf(stderr, "Memory access out of bounds at address %lld\n", op->value);
             cpu->error = 1;
@@ -97,11 +97,13 @@ void execute_one(CPU *cpu, Instr *instr) {
     }
 }
 
-CPU *cpu_init(CPU *processor) {
+CPU *cpu_init(CPU *processor, Memory *memory) {
 
     CPU *cpu = processor;
 
     memset(cpu, 0, sizeof(*cpu));
+
+    cpu->mem = memory;
 
     return cpu;
 }

@@ -51,8 +51,11 @@ int main(int argc, char *argv[]) {
 
         return 1;
     }
+    Memory ram;
+    memory_init(&ram);
+
     CPU processor;
-    CPU *cpu = cpu_init(&processor);
+    CPU *cpu = cpu_init(&processor, &ram);
 
     if (debug_mode == 0) {
         cpu_run(cpu, instr_list, number_of_instruction);

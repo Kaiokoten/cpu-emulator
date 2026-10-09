@@ -22,16 +22,16 @@ static void print_flags(CPU *cpu) {
     }
     printf("\n");
 }
-static void print_memory(void) {
+static void print_memory(const Memory *mem) {
 
-    char bit_number[sizeof(MEMORY[0]) * 8 + 1];
-    bit_number[sizeof(MEMORY[0]) * 8] = '\0';
+    char bit_number[sizeof(mem->cells[0]) * 8 + 1];
+    bit_number[sizeof(mem->cells[0]) * 8] = '\0';
     for (int i = 0; i < MEMSIZE; i++) {
-        if (MEMORY[i] != 0) {
-            for (size_t j = 0; j < sizeof(MEMORY[0]) * 8; j++) {
-                bit_number[sizeof(MEMORY[0]) * 8 - 1 - j] = '0' + ((MEMORY[i] >> j) & 1);
+        if (mem->cells[i] != 0) {
+            for (size_t j = 0; j < sizeof(mem->cells[0]) * 8; j++) {
+                bit_number[sizeof(mem->cells[0]) * 8 - 1 - j] = '0' + (((uint64_t)mem->cells[i] >> j) & 1);
             }
-            printf("MEMORY[%d] = %s", i, bit_number);
+            printf("MEMORY[%d] = %s\n", i, bit_number);
         }
     }
 }
@@ -57,7 +57,7 @@ void debugger_run(CPU *cpu, Instr *instructions, int number_of_instruction) {
             } else if (choice == '2') {
                 print_flags(cpu);
             } else if (choice == '3') {
-                print_memory();
+                print_memory(cpu->mem);
             } else if (choice == '4') {
                 printf("%d - command [%s]", executed_pc, opcode_names[instr->opcode]);
             }
