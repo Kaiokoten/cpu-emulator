@@ -36,7 +36,7 @@ static void print_memory(void) {
     }
 }
 
-void debuger_run(CPU *cpu, Instr *instructions, int number_of_instruction) {
+void debugger_run(CPU *cpu, Instr *instructions, int number_of_instruction) {
 
     Instr *instr = instructions;
 

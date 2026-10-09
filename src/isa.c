@@ -7,4 +7,3 @@ const char *const reg_names[] = {[RBX] = "RBX", [RCX] = "RCX", [RDX] = "RDX", [R
 
 const char *const opcode_names[] = {[MOV] = "MOV", [ADD] = "ADD", [DEC] = "DEC", [INC] = "INC",   [SUB] = "SUB",
                                     [CMP] = "CMP", [JMP] = "JMP", [JE] = "JE",   [HALT] = "HALT", [PRINT] = "PRINT"};
-                                    

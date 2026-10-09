@@ -9,6 +9,11 @@
 
 #include "ram.h"
 
+#define COMMENT_SYMBOL '#'
+#define LINE_BUF_SIZE 150
+#define INSTRUCTION_BUF_SIZE 100
+#define LABEL_BUF_SIZE 50
+
 typedef struct {
     char name[LABEL_NAME_SIZE];
     int address;
@@ -212,7 +217,7 @@ static int word_to_opcode(char *word) {
     }
     return -1;
 }
-static int operand_bit(Type_of_operand type) {
+static int operand_bit(OperandType type) {
     switch (type) {
     case REG:
         return ALLOW_REG;
@@ -321,11 +326,10 @@ Instr *assemble(const char file_name[], int *number_of_instructions) {
         return NULL;
     }
     Assembler assembler = {0};
-    if (assembler_init(&assembler) == 0){
+    if (assembler_init(&assembler) == 0) {
         fprintf(stderr, "Out of memory.\n");
         goto fail;
     }
-        
 
     char buf[LINE_BUF_SIZE];
     int line_number = 1;

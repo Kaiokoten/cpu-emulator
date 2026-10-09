@@ -9,7 +9,7 @@ typedef enum { ZF } Flag_enum;
 
 typedef struct {
 
-    int64_t regs[16];
+    int64_t regs[REG_COUNT];
     int flag[FLAG_COUNTER];
     int pc;
     int is_halted;

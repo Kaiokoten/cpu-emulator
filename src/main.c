@@ -57,10 +57,11 @@ int main(int argc, char *argv[]) {
     if (debug_mode == 0) {
         cpu_run(cpu, instr_list, number_of_instruction);
     } else if (debug_mode == 1) {
-        debuger_run(cpu, instr_list, number_of_instruction);
+        debugger_run(cpu, instr_list, number_of_instruction);
     }
 
     free(instr_list);
-    if(cpu->error == 1) return 1;
+    if (cpu->error == 1)
+        return 1;
     return 0;
 }

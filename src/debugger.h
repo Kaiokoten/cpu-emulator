@@ -3,6 +3,6 @@
 
 #include "cpu.h"
 
-void debuger_run(CPU *cpu, Instr *instructions, int number_of_instruction);
+void debugger_run(CPU *cpu, Instr *instructions, int number_of_instruction);
 
 #endif
