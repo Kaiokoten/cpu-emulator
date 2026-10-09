@@ -127,11 +127,57 @@ line 3: label 'a' mentioned multiple times.
 line 5: Syntax error: nowhere label was not found.
 ```
 
-### Known limitations
+## How it works
 
-- There is no stack, no `call`/`ret`, and `ZF` is the only flag.
-- Memory addresses must be constants: indirect addressing such as `[RAX]`
-  is not supported.
+```
+                 ┌─────────────┐             ┌──────────┐      ┌──────────┐
+ program.asm ──► │  assembler  │ ─ Instr[] ─►│   CPU    │ ◄──► │  Memory  │
+                 │ (2 passes)  │             └──────────┘      └──────────┘
+                 └─────────────┘                  ▲
+                                                  │ one step at a time
+                                             ┌──────────┐
+                                             │ debugger │
+                                             └──────────┘
+```
+
+### From text to execution
+
+1. **`main`** parses the command-line options and passes the file to the
+   assembler.
+2. **The assembler** turns the source text into an array of `Instr`
+   structures in two passes:
+   - **Pass 1** reads the file line by line. Each line is split into tokens
+     (separators and comments are dropped); a label declaration is recorded
+     together with the index of the next instruction; the opcode and operands
+     are parsed and checked against a per-opcode rule table (how many operands
+     and which kinds are allowed). Jump targets are kept by name, because a
+     label may be declared further down the file.
+   - **Pass 2** replaces every label name with the index of the instruction it
+     points to and reports labels that were never declared, using the line on
+     which they were referenced.
+
+   All text processing happens here, so the CPU never sees source code.
+3. **The CPU** executes the array: at each step it takes the instruction at
+   index `pc`, executes it and either moves `pc` to the next instruction or
+   sets it to a jump target. It stops on `halt`, after the last instruction,
+   or on a runtime error.
+4. **The debugger** drives the same CPU one instruction at a time and shows
+   registers, flags and memory between steps.
+
+The assembler and the CPU never call each other: they only share the `Instr`
+type and the opcode and register tables from `isa.h`.
+
+### Project layout
+
+| File | Responsibility |
+|---|---|
+| `src/main.c` | command-line options, wiring the modules together, exit code |
+| `src/isa.h`, `src/isa.c` | the instruction set: opcodes, registers, `Operand` and `Instr`, name tables |
+| `src/assembler.h`, `src/assembler.c` | source text → `Instr[]`: tokenizer, number and address parsing, operand and label validation |
+| `src/cpu.h`, `src/cpu.c` | registers, flags and instruction execution |
+| `src/ram.h`, `src/ram.c` | memory |
+| `src/debugger.h`, `src/debugger.c` | step-by-step mode |
+| `tests/` | test programs with expected output and the test runner |
 
 ## Tests
 
