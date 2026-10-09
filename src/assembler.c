@@ -106,14 +106,24 @@ static int char_is_split(char a) {
 static char **split(char line[]) {
     int i = 0;
     int j = 0;
-    char **words = (char **)malloc((LINE_BUF_SIZE) * (sizeof(char *)));
+    char **words;
+    char *word;
+    if ((words = (char **)malloc((LINE_BUF_SIZE) * (sizeof(char *)))) == NULL)
+        return NULL;
 
     int k = 0;
     while (char_is_split(line[i]))
         i++;
 
     while (!char_is_end(line[i])) {
-        char *word = malloc(LINE_BUF_SIZE);
+
+        if ((word = malloc(LINE_BUF_SIZE)) == NULL) {
+            for (int f = 0; f < j; f++) {
+                free(words[f]);
+            }
+            free(words);
+            return NULL;
+        }
         for (; !char_is_end(line[i]) && !char_is_split(line[i]); i++) {
             word[k] = line[i];
             k++;
@@ -278,27 +288,31 @@ static int validate_instruction(const Instr *instr, int operand_count, int line_
     }
     return 1;
 }
-Assembler *assembler_init(Assembler *assembler) {
-
+int assembler_init(Assembler *assembler) {
     assembler->exit_error = 0;
 
-    assembler->label_arr = (Label *)malloc(sizeof(Label) * LABEL_BUF_SIZE);
+    if ((assembler->label_arr = (Label *)malloc(sizeof(Label) * LABEL_BUF_SIZE)) == NULL)
+        return 0;
     assembler->last_label_index = 0;
-    assembler->instr_arr = (Instr *)malloc(sizeof(Instr) * INSTRUCTION_BUF_SIZE);
+    if ((assembler->instr_arr = (Instr *)malloc(sizeof(Instr) * INSTRUCTION_BUF_SIZE)) == NULL)
+        return 0;
     assembler->last_instr_index = 0;
 
     assembler->label_arr_max_size = LABEL_BUF_SIZE;
     assembler->instr_arr_max_size = INSTRUCTION_BUF_SIZE;
 
-    assembler->instr_lines = malloc(sizeof(int) * INSTRUCTION_BUF_SIZE);
+    if ((assembler->instr_lines = malloc(sizeof(int) * INSTRUCTION_BUF_SIZE)) == NULL)
+        return 0;
 
-    return assembler;
+    return 1;
+}
+static void assembler_free(Assembler *assembler) {
+    free(assembler->label_arr);
+    free(assembler->instr_arr);
+    free(assembler->instr_lines);
 }
 
 Instr *assemble(const char file_name[], int *number_of_instructions) {
-
-    Assembler assembler;
-    assembler = *assembler_init(&assembler);
 
     FILE *fp = fopen(file_name, "r");
 
@@ -306,6 +320,12 @@ Instr *assemble(const char file_name[], int *number_of_instructions) {
         fprintf(stderr, "Couldn't open the file!\n");
         return NULL;
     }
+    Assembler assembler = {0};
+    if (assembler_init(&assembler) == 0){
+        fprintf(stderr, "Out of memory.\n");
+        goto fail;
+    }
+        
 
     char buf[LINE_BUF_SIZE];
     int line_number = 1;
@@ -314,7 +334,7 @@ Instr *assemble(const char file_name[], int *number_of_instructions) {
     while (fgets(buf, LINE_BUF_SIZE, fp) != NULL) {
         if (strchr(buf, '\n') == NULL && feof(fp) == 0) {
             fprintf(stderr, "line %d: %.15s... too long.\n", line_number, buf);
-            return NULL;
+            goto fail;
         }
         if (assembler.last_instr_index == assembler.instr_arr_max_size) {
             int new_size = assembler.instr_arr_max_size * 2;
@@ -322,14 +342,14 @@ Instr *assemble(const char file_name[], int *number_of_instructions) {
             Instr *pinstr = realloc(assembler.instr_arr, sizeof(*pinstr) * new_size);
             if (pinstr == NULL) {
                 fprintf(stderr, "line %d: out of memory.\n", line_number);
-                return NULL;
+                goto fail;
             }
             assembler.instr_arr = pinstr;
 
             int *plines = realloc(assembler.instr_lines, sizeof(*plines) * new_size);
             if (plines == NULL) {
                 fprintf(stderr, "line %d: out of memory.\n", line_number);
-                return NULL;
+                goto fail;
             }
             assembler.instr_lines = plines;
 
@@ -341,7 +361,7 @@ Instr *assemble(const char file_name[], int *number_of_instructions) {
             Label *plabel = realloc(assembler.label_arr, sizeof(*plabel) * new_size);
             if (plabel == NULL) {
                 fprintf(stderr, "line %d: out of memory.\n", line_number);
-                return NULL;
+                goto fail;
             }
             assembler.label_arr = plabel;
             assembler.label_arr_max_size = new_size;
@@ -349,20 +369,25 @@ Instr *assemble(const char file_name[], int *number_of_instructions) {
 
         Instr instr = {0};
         int line_s = 0;
-        char **line = split(buf);
+        char **line;
+        if ((line = split(buf)) == NULL) {
+            fprintf(stderr, "line %d: out of memory.\n", line_number);
+            goto fail;
+        }
         int skip_line = 0;
         line_s = sizeof_dArr(line);
         char **no_label_line = line;
         int no_label_line_s = line_s;
         if (line_s == 0) {
             line_number++;
+            line_free(line, 0);
             continue;
         }
         if (is_line_label(line[0])) {
             if (validate_label(&assembler, line[0], line_number) == 0) {
                 assembler.exit_error = 1;
-                free(assembler.label_arr);
-                return NULL;
+                line_free(line, line_s);
+                goto fail;
             }
             strcpy(assembler.label_arr[assembler.last_label_index].name, line[0]);
             assembler.label_arr[assembler.last_label_index].address = instruction_number;
@@ -379,7 +404,8 @@ Instr *assemble(const char file_name[], int *number_of_instructions) {
             if (opcode == -1) {
                 fprintf(stderr, "line %d: Syntax error: %s opcode was not found.\n", line_number, no_label_line[0]);
                 assembler.exit_error = 1;
-                return NULL;
+                line_free(line, line_s);
+                goto fail;
             }
             instr.opcode = opcode;
         };
@@ -397,13 +423,13 @@ Instr *assemble(const char file_name[], int *number_of_instructions) {
         }
         if (assembler.exit_error == 1) {
             line_free(line, line_s);
-            return NULL;
+            goto fail;
         }
         if (!skip_line) {
             if (validate_instruction(&instr, no_label_line_s - 1, line_number) == 0) {
                 assembler.exit_error = 1;
                 line_free(line, line_s);
-                return NULL;
+                goto fail;
             }
             assembler.instr_arr[assembler.last_instr_index] = instr;
             assembler.instr_lines[assembler.last_instr_index] = line_number;
@@ -423,7 +449,7 @@ Instr *assemble(const char file_name[], int *number_of_instructions) {
         int address = find_label(op->label, &assembler);
         if (address < 0) {
             fprintf(stderr, "line %d: Syntax error: %s label was not found.\n", assembler.instr_lines[n], op->label);
-            return NULL;
+            goto fail;
         }
         op->value = address;
     }
@@ -434,5 +460,11 @@ Instr *assemble(const char file_name[], int *number_of_instructions) {
     *number_of_instructions = instruction_number;
 
     fclose(fp);
+
     return assembler.instr_arr;
+
+fail:
+    assembler_free(&assembler);
+    fclose(fp);
+    return NULL;
 }
