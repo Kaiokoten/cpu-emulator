@@ -47,50 +47,72 @@ static int64_t *op_to_addr(CPU *cpu, Operand *op) {
 void execute_one(CPU *cpu, Instr *instr) {
 
     int jumped = 0;
-    if (instr->opcode == MOV || instr->opcode == ADD || instr->opcode == SUB) {
+
+    switch (instr->opcode) {
+    case MOV:
+    case ADD:
+    case SUB: {
         int64_t *first_operand_addr = op_to_addr(cpu, &instr->operand1);
         int64_t second_operand = op_to_val(cpu, &instr->operand2);
-        if (cpu->error != 1) {
-            if (instr->opcode == MOV)
-                *first_operand_addr = second_operand;
-            else if (instr->opcode == ADD)
-                *first_operand_addr += second_operand;
-            else if (instr->opcode == SUB)
-                *first_operand_addr -= second_operand;
-        } else
+        if (cpu->error)
             return;
+
+        if (instr->opcode == MOV)
+            *first_operand_addr = second_operand;
+        else if (instr->opcode == ADD)
+            *first_operand_addr += second_operand;
+        else if (instr->opcode == SUB)
+            *first_operand_addr -= second_operand;
+
+        break;
     }
-
-    else if (instr->opcode == DEC || instr->opcode == INC) {
+    case DEC:
+    case INC: {
         int64_t *first_operand_addr = op_to_addr(cpu, &instr->operand1);
-        if (cpu->error != 1) {
-            if (instr->opcode == INC)
-                (*first_operand_addr)++;
-            else if (instr->opcode == DEC)
-                (*first_operand_addr)--;
-        } else
+
+        if (cpu->error)
             return;
 
-    } else if (instr->opcode == CMP) {
+        if (instr->opcode == INC)
+            (*first_operand_addr)++;
+        else if (instr->opcode == DEC)
+            (*first_operand_addr)--;    
+
+        break;
+    }
+    case CMP: {
         cpu->flag[ZF] = (op_to_val(cpu, &instr->operand1)) == op_to_val(cpu, &instr->operand2);
-
-    } else if (instr->opcode == JE && cpu->flag[ZF]) {
+        break;
+    }
+    case JE: {
+        if (cpu->flag[ZF]) {
+            cpu->pc = (int)instr->operand1.value;
+            jumped = 1;
+        }
+        break;
+    }
+    case JMP: {
         cpu->pc = (int)instr->operand1.value;
         jumped = 1;
-    } else if (instr->opcode == JMP) {
-        cpu->pc = (int)instr->operand1.value;
-        jumped = 1;
-
-    } else if (instr->opcode == PRINT) {
-
+        break;
+    }
+    case PRINT: {
         int64_t to_print = op_to_val(cpu, &instr->operand1);
         if (cpu->error != 1) {
             printf("%lld\n", to_print);
         }
-
-    } else if (instr->opcode == HALT) {
-        cpu->is_halted = 1;
+        break;
     }
+    case HALT: {
+         cpu->is_halted = 1;
+        break;
+    }
+    default: 
+        fprintf(stderr, "invalid opcode %d at pc %d\n", instr->opcode, cpu->pc);;
+        cpu->error = 1;
+        return;
+    }
+   
 
     if (!jumped) {
         cpu->pc++;
@@ -110,7 +132,7 @@ CPU *cpu_init(CPU *processor, Memory *memory) {
 
 void cpu_run(CPU *cpu, Instr *instructions, int number_of_instruction) {
 
-    Instr *instr = instructions;
+    Instr *instr;
 
     while (cpu->pc < number_of_instruction && !cpu->is_halted && cpu->error != 1) {
         instr = instructions + cpu->pc;
