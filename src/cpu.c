@@ -11,7 +11,7 @@ static int64_t op_to_val(CPU *cpu, Operand *op) {
         if (is_valid_mem_addr(op->value))
             val = cpu->mem->cells[op->value];
         else {
-            fprintf(stderr, "Memory access out of bounds at address %lld\n", op->value);
+            fprintf(stderr, "Memory access out of bounds at address %lld\n", (long long)op->value);
             cpu->error = 1;
         }
 
@@ -32,7 +32,7 @@ static int64_t *op_to_addr(CPU *cpu, Operand *op) {
         if (is_valid_mem_addr(op->value))
             val = &cpu->mem->cells[op->value];
         else {
-            fprintf(stderr, "Memory access out of bounds at address %lld\n", op->value);
+            fprintf(stderr, "Memory access out of bounds at address %lld\n", (long long)op->value);
             cpu->error = 1;
         }
     } else if (op->type == REG) {
@@ -76,7 +76,7 @@ void execute_one(CPU *cpu, Instr *instr) {
         if (instr->opcode == INC)
             (*first_operand_addr)++;
         else if (instr->opcode == DEC)
-            (*first_operand_addr)--;    
+            (*first_operand_addr)--;
 
         break;
     }
@@ -99,20 +99,20 @@ void execute_one(CPU *cpu, Instr *instr) {
     case PRINT: {
         int64_t to_print = op_to_val(cpu, &instr->operand1);
         if (cpu->error != 1) {
-            printf("%lld\n", to_print);
+            printf("%lld\n", (long long)to_print);
         }
         break;
     }
     case HALT: {
-         cpu->is_halted = 1;
+        cpu->is_halted = 1;
         break;
     }
-    default: 
-        fprintf(stderr, "invalid opcode %d at pc %d\n", instr->opcode, cpu->pc);;
+    default:
+        fprintf(stderr, "invalid opcode %d at pc %d\n", instr->opcode, cpu->pc);
+        ;
         cpu->error = 1;
         return;
     }
-   
 
     if (!jumped) {
         cpu->pc++;

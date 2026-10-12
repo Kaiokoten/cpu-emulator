@@ -5,9 +5,9 @@
 
 #define MEMSIZE 4096
 
-typedef struct{
+typedef struct {
     int64_t cells[MEMSIZE];
-}Memory;
+} Memory;
 
 void memory_init(Memory *mem);
 int is_valid_mem_addr(int64_t addr);

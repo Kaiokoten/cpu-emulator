@@ -2,6 +2,7 @@
 #define ISA_H
 
 #include <stdint.h>
+#include <stdio.h>
 
 #define LABEL_NAME_SIZE 50
 
@@ -23,5 +24,7 @@ typedef struct {
 
 extern const char *const opcode_names[OPCODE_COUNT];
 extern const char *const reg_names[REG_COUNT];
+
+void print_instr(FILE *out, const Instr *instr);
 
 #endif

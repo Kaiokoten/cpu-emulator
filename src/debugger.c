@@ -10,7 +10,7 @@ static void print_regs(CPU *cpu) {
     int quarter = (sizeof(reg_names) / sizeof(reg_names[0])) >> 2;
     for (int i = 0; i < quarter; i++) {
         for (int j = 0; j < quarter; j++) {
-            printf("[%s] = %lld\t", reg_names[quarter * j + i], cpu->regs[quarter * j + i]);
+            printf("[%s] = %lld\t", reg_names[quarter * j + i], (long long)cpu->regs[quarter * j + i]);
         }
         printf("\n");
     }
@@ -59,7 +59,9 @@ void debugger_run(CPU *cpu, Instr *instructions, int number_of_instruction) {
             } else if (choice == '3') {
                 print_memory(cpu->mem);
             } else if (choice == '4') {
-                printf("%d - command [%s]", executed_pc, opcode_names[instr->opcode]);
+                printf("%d ", executed_pc);
+                print_instr(stdout, instr);
+                printf("\n");
             }
 
             printf("\n");
