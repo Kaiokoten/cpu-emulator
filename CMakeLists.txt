@@ -16,9 +16,9 @@ add_executable(cpu-emulator
     src/ram.c
 )
 
-if(MSVC)                                                   
-    target_compile_options(cpu-emulator PRIVATE /W4)   
-    target_compile_definitions(cpu-emulator PRIVATE _CRT_SECURE_NO_WARNINGS)    
-else()                                                     
+if(MSVC)
+    target_compile_options(cpu-emulator PRIVATE /W4)
+    target_compile_definitions(cpu-emulator PRIVATE _CRT_SECURE_NO_WARNINGS)
+else()
     target_compile_options(cpu-emulator PRIVATE -Wall -Wextra)
 endif()
