@@ -25,12 +25,47 @@ gcc -std=c99 -Wall -Wextra -g src/*.c -o cpu-emulator.exe
 The exit code is `0` on success and `1` if the program could not be
 assembled or stopped with a runtime error.
 
-In debugger mode, after each instruction you can inspect:
-- `1` — registers
-- `2` — flags
-- `3` — memory (non-zero cells, as binary)
-- `4` — current pc and instruction
-- `0` or `\n` / empty line — continue to the next instruction
+### Debugger
+
+In debugger mode the emulator stops before every instruction, shows its
+index and text, and waits for a command:
+
+| Command | Action |
+|---|---|
+| `s` or Enter | execute the shown instruction and stop at the next one |
+| `r` | show the registers |
+| `f` | show the flags |
+| `m` | show the non-zero memory cells |
+| `c` | continue to the end of the program without stopping |
+| `q` | quit |
+| `h` | list the commands |
+
+A session with the countdown program from the [example](#example) below:
+
+```
+0 MOV RCX, 3
+> s
+
+1 PRINT RCX
+> s
+
+3
+2 DEC RCX
+> f
+[ZF] = 0
+
+> c
+
+2
+1
+Program halted
+```
+
+An unknown command changes nothing, so a typo never executes an instruction.
+If the input ends (for example, when commands are piped from a file), the
+program runs to the end. At the end the debugger reports why it stopped:
+`Program halted`, `Reached the end of the program` or
+`Stopped: runtime error`.
 
 ## Assembly language
 
@@ -127,6 +162,16 @@ line 3: label 'a' mentioned multiple times.
 line 5: Syntax error: nowhere label was not found.
 ```
 
+### Limitations
+
+- `ZF` is the only flag and `je` the only conditional jump.
+- There is no stack: no `push`, `pop`, `call` or `ret`.
+- There are no multiplication, division or bitwise instructions.
+- A memory operand is always a constant address: `[RAX]` is not supported.
+- Numbers are decimal only; memory has 4096 cells.
+- The debugger has no breakpoints: it either stops before every instruction
+  or runs to the end.
+
 ## How it works
 
 ```
@@ -172,7 +217,7 @@ type and the opcode and register tables from `isa.h`.
 | File | Responsibility |
 |---|---|
 | `src/main.c` | command-line options, wiring the modules together, exit code |
-| `src/isa.h`, `src/isa.c` | the instruction set: opcodes, registers, `Operand` and `Instr`, name tables |
+| `src/isa.h`, `src/isa.c` | the instruction set: opcodes, registers, `Operand` and `Instr`, name tables, printing an instruction as text |
 | `src/assembler.h`, `src/assembler.c` | source text → `Instr[]`: tokenizer, number and address parsing, operand and label validation |
 | `src/cpu.h`, `src/cpu.c` | registers, flags and instruction execution |
 | `src/ram.h`, `src/ram.c` | memory |
@@ -186,7 +231,10 @@ bash tests/run_tests.sh
 ```
 
 Builds the project and runs each `.asm` file in `tests/` in batch mode,
-comparing its output against the matching `.expected` file.
+comparing its output against the matching `.expected` file. If there is also a
+matching `.in` file, the program runs in debugger mode with that file as the
+typed commands (the `dbg_*` tests). A test that does not finish within 5
+seconds fails instead of hanging the run.
 
 On Windows, run it from Git Bash (in PowerShell, `bash` starts WSL instead):
 
