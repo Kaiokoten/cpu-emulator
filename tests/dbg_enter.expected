@@ -1,0 +1,9 @@
+0 PRINT 1
+> 
+1
+1 PRINT 2
+> 
+2
+2 HALT
+> 
+Program halted

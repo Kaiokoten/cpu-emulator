@@ -1,0 +1,11 @@
+0 HALT
+> Commands:
+r - REG info
+f - FLAGS info
+m - MEMORY
+c - execute till end
+s or Enter - next step
+q - quit
+h - help
+
+> 
