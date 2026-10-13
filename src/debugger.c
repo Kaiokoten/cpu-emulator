@@ -1,13 +1,16 @@
 #include "debugger.h"
 
 #include <stdio.h>
+#include <string.h>
 
 #include "ram.h"
+
+#define LINE_SIZE 16
 
 static const char *const flag_names[] = {[ZF] = "ZF"};
 
 static void print_regs(CPU *cpu) {
-    int quarter = (sizeof(reg_names) / sizeof(reg_names[0])) >> 2;
+    int quarter = REG_COUNT >> 2;
     for (int i = 0; i < quarter; i++) {
         for (int j = 0; j < quarter; j++) {
             printf("[%s] = %lld\t", reg_names[quarter * j + i], (long long)cpu->regs[quarter * j + i]);
@@ -24,51 +27,83 @@ static void print_flags(CPU *cpu) {
 }
 static void print_memory(const Memory *mem) {
 
-    char bit_number[sizeof(mem->cells[0]) * 8 + 1];
-    bit_number[sizeof(mem->cells[0]) * 8] = '\0';
     for (int i = 0; i < MEMSIZE; i++) {
         if (mem->cells[i] != 0) {
-            for (size_t j = 0; j < sizeof(mem->cells[0]) * 8; j++) {
-                bit_number[sizeof(mem->cells[0]) * 8 - 1 - j] = '0' + (((uint64_t)mem->cells[i] >> j) & 1);
-            }
-            printf("MEMORY[%d] = %s\n", i, bit_number);
+            printf("MEMORY[%d] = %lld\n", i, (long long)mem->cells[i]);
         }
     }
 }
 
+static void print_help(void) {
+    printf("Commands:\nr - REG info\nf - FLAGS info\nm - MEMORY\nc - execute till end\ns or Enter - next "
+           "step\nq - quit\nh - help\n");
+}
 void debugger_run(CPU *cpu, Instr *instructions, int number_of_instruction) {
 
     Instr *instr = instructions;
-
+    int till_end = 0;
     while (cpu->pc < number_of_instruction && !cpu->is_halted && cpu->error != 1) {
         instr = instructions + cpu->pc;
-        int executed_pc = cpu->pc;
-        execute_one(cpu, instr);
-        int choice = -1;
-        printf("What you want to see:\n1 - REG info\n2 - FLAGS info\n3 - MEMORY\n4 - pc\n");
-        while ((choice = getchar()) != '\n' && choice != EOF) {
-            if (choice == '0') {
+        if (till_end != 1) {
+            printf("%d ", cpu->pc);
+            print_instr(stdout, instr);
+            printf("\n");
+        }
+        int step = 0;
+
+        while (!step && !till_end) {
+
+            char command[LINE_SIZE];
+            printf("> ");
+            if (fgets(command, sizeof(command), stdin) == NULL) {
+                till_end = 1;
+                break;
+            }
+
+            if (strchr(command, '\n') == NULL) {
+                printf("Too long command\n");
                 int c;
                 while ((c = getchar()) != '\n' && c != EOF) {
                 }
-                break;
-            } else if (choice == '1') {
+                continue;
+            }
+
+            switch (command[0]) {
+            case 'r':
                 print_regs(cpu);
-            } else if (choice == '2') {
+                break;
+            case 'f':
                 print_flags(cpu);
-            } else if (choice == '3') {
+                break;
+            case 'm':
                 print_memory(cpu->mem);
-            } else if (choice == '4') {
-                printf("%d ", executed_pc);
-                print_instr(stdout, instr);
-                printf("\n");
+                break;
+            case 'q':
+                return;
+            case 'h':
+                print_help();
+                break;
+            case 'c':
+                till_end = 1;
+                break;
+            case '\n':
+            case 's':
+                step = 1;
+                break;
+            default:
+                printf("Unknown command, type h for help");
+                break;
             }
 
             printf("\n");
-            printf("What you want to see:\n1 - REG info\n2 - FLAGS info\n3 - MEMORY\n4 - pc\n");
-            int c;
-            while ((c = getchar()) != '\n' && c != EOF) {
-            }
         }
+        execute_one(cpu, instr);
+    }
+    if (cpu->error == 1) {
+        printf("Stopped: runtime error\n");
+    } else if (cpu->is_halted == 1) {
+        printf("Program halted\n");
+    } else {
+        printf("Reached the end of the program\n");
     }
 }
